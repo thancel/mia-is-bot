@@ -1,0 +1,61 @@
+const fs   = require('fs');
+const path = require('path');
+
+const DATA_DIR    = path.join(__dirname, '..', '..', 'data');
+const CONFIG_FILE = path.join(DATA_DIR, 'guild_configs.json');
+
+if (!fs.existsSync(DATA_DIR))    fs.mkdirSync(DATA_DIR, { recursive: true });
+if (!fs.existsSync(CONFIG_FILE)) fs.writeFileSync(CONFIG_FILE, '{}', 'utf8');
+
+/**
+ * Config structure per guild:
+ * {
+ *   "GUILD_ID": {
+ *     welcomeChannelId : string | null,
+ *     goodbyeChannelId : string | null,
+ *     logChannelId     : string | null,
+ *     welcomeText      : string | null,
+ *     welcomeColor     : string | null,
+ *     goodbyeText      : string | null,
+ *     goodbyeColor     : string | null,
+ *     updatedAt        : ISO string
+ *   }
+ * }
+ */
+
+function readAll() {
+  try { return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); }
+  catch { return {}; }
+}
+
+function writeAll(data) {
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(data, null, 2), 'utf8');
+}
+
+function getConfig(guildId) {
+  const all = readAll();
+  return all[guildId] || {
+    welcomeChannelId: null,
+    goodbyeChannelId: null,
+    logChannelId:     null,
+  };
+}
+
+function setConfig(guildId, updates) {
+  const all = readAll();
+  all[guildId] = {
+    ...(all[guildId] || {}),
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  };
+  writeAll(all);
+  return all[guildId];
+}
+
+function resetConfig(guildId) {
+  const all = readAll();
+  delete all[guildId];
+  writeAll(all);
+}
+
+module.exports = { getConfig, setConfig, resetConfig };

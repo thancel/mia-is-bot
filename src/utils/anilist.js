@@ -1,0 +1,316 @@
+const {
+  EmbedBuilder,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
+  ActionRowBuilder,
+  ComponentType,
+} = require('discord.js');
+
+const SEARCH_QUERY = `
+query ($search: String, $type: MediaType) {
+  Page(page: 1, perPage: 10) {
+    media(search: $search, type: $type, sort: SEARCH_MATCH) {
+      id
+      title { romaji english native }
+      description(asHtml: false)
+      type
+      format
+      status
+      episodes
+      chapters
+      volumes
+      averageScore
+      popularity
+      rankings { rank type allTime }
+      genres
+      season
+      seasonYear
+      startDate { year month day }
+      endDate   { year month day }
+      coverImage { extraLarge large color }
+      bannerImage
+      siteUrl
+      countryOfOrigin
+      studios(isMain: true) { nodes { name } }
+      isAdult
+    }
+  }
+}`;
+
+async function searchAniList(query, type) {
+  const res = await fetch('https://graphql.anilist.co', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ query: SEARCH_QUERY, variables: { search: query, type } }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const json = await res.json();
+  if (json.errors?.length) throw new Error(json.errors[0].message || 'AniList API error');
+  return json?.data?.Page?.media || [];
+}
+
+function fmtDate(d) {
+  if (!d?.year) return '?';
+  const yy = String(d.year).slice(-2);
+  if (d.month && d.day)
+    return `${String(d.month).padStart(2,'0')}/${String(d.day).padStart(2,'0')}/${yy}`;
+  return `?/?/${yy}`;
+}
+
+function dateRange(start, end) {
+  return `${fmtDate(start)} — ${fmtDate(end)}`;
+}
+
+function cleanDesc(desc, max = 380) {
+  if (!desc) return '*No synopsis available.*';
+  const clean = desc
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#039;/g, "'")
+    .replace(/\n{3,}/g, '\n\n').trim();
+  return clean.length > max ? clean.slice(0, max) + '…' : clean;
+}
+
+function statusLabel(s) {
+  return {
+    FINISHED: 'Finished', RELEASING: 'Ongoing',
+    NOT_YET_RELEASED: 'Not Yet Aired', CANCELLED: 'Cancelled', HIATUS: 'On Hiatus',
+  }[s] || s || '?';
+}
+
+function formatLabel(format, country) {
+  if (format === 'MANGA') {
+    if (country === 'KR') return 'Manhwa';
+    if (country === 'CN') return 'Manhua';
+    return 'Manga';
+  }
+  return {
+    TV: 'TV Series', TV_SHORT: 'TV Short', MOVIE: 'Movie', SPECIAL: 'Special',
+    OVA: 'OVA', ONA: 'ONA', MUSIC: 'Music', NOVEL: 'Light Novel', ONE_SHOT: 'One Shot',
+  }[format] || format || '?';
+}
+
+function seasonLabel(season, year) {
+  if (!season || !year) return '?';
+  return `${season.charAt(0) + season.slice(1).toLowerCase()} ${year}`;
+}
+
+function rankingLabel(rankings) {
+  if (!rankings?.length) return '?';
+  const pick = rankings.find(r => r.allTime && r.type === 'RATED')
+            || rankings.find(r => r.type === 'RATED')
+            || rankings[0];
+  return `#${pick.rank}`;
+}
+
+function v(val) {
+  return (val !== null && val !== undefined && val !== '') ? String(val) : '?';
+}
+
+function buildEmbed(media) {
+  const isAnime = media.type === 'ANIME';
+  const country = media.countryOfOrigin || '';
+
+  const rawColor = media.coverImage?.color;
+  const color = rawColor
+    ? parseInt(rawColor.replace('#', ''), 16)
+    : (isAnime ? 0xe74c3c : 0x3498db);
+
+  const english = media.title?.english;
+  const romaji  = media.title?.romaji || '';
+  const native  = media.title?.native || '';
+  const displayTitle = english
+    ? `${english} (${romaji})`
+    : romaji || native || 'Unknown';
+
+  const fmtStr     = formatLabel(media.format, country);
+  const status     = statusLabel(media.status);
+  const genres     = media.genres?.slice(0, 5).join(', ') || '?';
+  const score      = media.averageScore ? `${media.averageScore}/100` : '?';
+  const popularity = media.popularity   ? media.popularity.toLocaleString() : '?';
+  const ranking    = rankingLabel(media.rankings);
+
+  const embed = new EmbedBuilder()
+    .setColor(color)
+    .setTitle(displayTitle.slice(0, 256))
+    .setURL(media.siteUrl)
+    .setDescription(cleanDesc(media.description))
+    .setThumbnail(media.coverImage?.extraLarge || media.coverImage?.large || null);
+
+  // Semua inline: false → tidak ada spasi aneh di mobile
+  if (isAnime) {
+    const studio = media.studios?.nodes?.[0]?.name || '?';
+    embed.addFields(
+      { name: '📊 Status',     value: status,                                      inline: false },
+      { name: '🎭 Format',     value: fmtStr,                                      inline: false },
+      { name: '📺 Episodes',   value: v(media.episodes),                           inline: false },
+      { name: '🏢 Studio',     value: studio,                                      inline: false },
+      { name: '🌸 Season',     value: seasonLabel(media.season, media.seasonYear), inline: false },
+      { name: '🎵 Genres',     value: genres,                                      inline: false },
+      { name: '⭐ Score',      value: score,                                       inline: false },
+      { name: '👥 Popularity', value: popularity,                                  inline: false },
+      { name: '🏆 Ranking',    value: ranking,                                     inline: false },
+      { name: '📅 Date',       value: dateRange(media.startDate, media.endDate),   inline: false },
+    );
+  } else {
+    embed.addFields(
+      { name: '📊 Status',     value: status,                                    inline: false },
+      { name: '🎭 Format',     value: fmtStr,                                    inline: false },
+      { name: '📖 Chapters',   value: v(media.chapters),                         inline: false },
+      { name: '📚 Volumes',    value: v(media.volumes),                          inline: false },
+      { name: '🎵 Genres',     value: genres,                                    inline: false },
+      { name: '⭐ Score',      value: score,                                     inline: false },
+      { name: '👥 Popularity', value: popularity,                                inline: false },
+      { name: '🏆 Ranking',    value: ranking,                                   inline: false },
+      { name: '📅 Date',       value: dateRange(media.startDate, media.endDate), inline: false },
+    );
+  }
+
+  if (media.bannerImage) embed.setImage(media.bannerImage);
+  embed
+    .setFooter({ text: `AniList • ID: ${media.id}${media.isAdult ? ' • 🔞 Adult' : ''}` })
+    .setTimestamp();
+
+  return embed;
+}
+
+function selectLabel(media) {
+  const country = media.countryOfOrigin || '';
+  return {
+    fmt:    formatLabel(media.format, country),
+    year:   media.seasonYear || media.startDate?.year || '?',
+    status: statusLabel(media.status),
+  };
+}
+
+const TIMEOUT_MS = 5 * 60 * 1000;
+
+async function runSearch(interaction, type) {
+  // Defer PUBLIC → hasil embed bisa dilihat semua orang
+  await interaction.deferReply({ ephemeral: false });
+
+  const query = interaction.options.getString('judul');
+
+  let results;
+  try {
+    results = await searchAniList(query, type);
+  } catch (err) {
+    console.error('[AniList] Error:', err);
+    return interaction.editReply({
+      content: `❌ Failed to reach AniList API: \`${err.message}\`\nPlease try again later.`,
+    });
+  }
+
+  if (!results.length) {
+    return interaction.editReply({ content: `❌ No results found for: **${query}**` });
+  }
+
+  // Single result → embed public langsung
+  if (results.length === 1) {
+    return interaction.editReply({ embeds: [buildEmbed(results[0])] });
+  }
+
+  // Banyak hasil:
+  // 1. Edit reply (public) dengan pesan singkat dulu
+  // 2. Kirim select menu via followUp EPHEMERAL → hanya user yg search yg bisa pilih
+  const previewEmbed = new EmbedBuilder()
+    .setColor(0xffa500)
+    .setTitle(`🔍 Search Results: "${query}"`)
+    .setDescription(
+      `Found **${results.length}** results for ${type === 'ANIME' ? '🎌 Anime' : '📚 Manga'}.\n` +
+      `<@${interaction.user.id}> is choosing a title...`
+    )
+    .setFooter({ text: '⏱️ Selection expires in 5 minutes' });
+
+  // Public message — semua orang bisa lihat sedang ada pencarian
+  await interaction.editReply({ embeds: [previewEmbed] });
+
+  // Select menu EPHEMERAL → hanya user yg search
+  const options = results.slice(0, 10).map(media => {
+    const title = (media.title?.english || media.title?.romaji || 'Unknown').slice(0, 100);
+    const { fmt, year, status } = selectLabel(media);
+    const desc = `${fmt} • ${status} • ${year}`.slice(0, 100);
+    return new StringSelectMenuOptionBuilder()
+      .setLabel(title)
+      .setDescription(desc)
+      .setValue(String(media.id));
+  });
+
+  const customId = `anilist_${type.toLowerCase()}_${interaction.id}`;
+  const select = new StringSelectMenuBuilder()
+    .setCustomId(customId)
+    .setPlaceholder('📋 Select a title...')
+    .addOptions(options);
+
+  const row = new ActionRowBuilder().addComponents(select);
+
+  // followUp ephemeral → hanya user ini yang lihat menu pilihan
+  let menuMsg;
+  try {
+    menuMsg = await interaction.followUp({
+      content: '👇 Choose the title you meant:',
+      components: [row],
+      ephemeral: true,
+    });
+  } catch (err) {
+    console.error('[AniList] Failed to send select menu:', err);
+    return;
+  }
+
+  const collector = menuMsg.createMessageComponentCollector({
+    componentType: ComponentType.StringSelect,
+    time: TIMEOUT_MS,
+    filter: i => i.user.id === interaction.user.id,
+  });
+
+  collector.on('collect', async i => {
+    try {
+      const selectedId = parseInt(i.values[0], 10);
+      const media = results.find(m => m.id === selectedId);
+
+      if (!media) {
+        await i.update({ content: '❌ Data not found. Please search again.', components: [] });
+        return;
+      }
+
+      // Tutup menu ephemeral
+      await i.update({ content: '✅ Selected!', components: [] });
+
+      // Edit public reply dengan embed hasil
+      await interaction.editReply({ embeds: [buildEmbed(media)], content: null });
+
+      collector.stop('selected');
+    } catch (err) {
+      console.error('[AniList] Error on select:', err);
+      try {
+        await i.update({ content: '❌ An error occurred. Please try again.', components: [] });
+      } catch {}
+    }
+  });
+
+  collector.on('end', async (_, reason) => {
+    if (reason === 'selected') return;
+    // Timeout → disable menu ephemeral + update public msg
+    try {
+      const disabledSelect = StringSelectMenuBuilder.from(select).setDisabled(true);
+      await interaction.followUp({
+        content: '⏱️ Selection expired.',
+        components: [new ActionRowBuilder().addComponents(disabledSelect)],
+        ephemeral: true,
+      });
+      // Update public reply jadi expired
+      const expiredEmbed = new EmbedBuilder()
+        .setColor(0x99aab5)
+        .setTitle(`🔍 Search Results: "${query}"`)
+        .setDescription(
+          `Found **${results.length}** results, but <@${interaction.user.id}> didn't select any.\n` +
+          `Run the command again to search.`
+        )
+        .setFooter({ text: '⏱️ Selection expired after 5 minutes' });
+      await interaction.editReply({ embeds: [expiredEmbed], content: null });
+    } catch {}
+  });
+}
+
+module.exports = { searchAniList, buildEmbed, runSearch, formatLabel, statusLabel };
