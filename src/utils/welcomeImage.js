@@ -10,19 +10,21 @@ if (!fs.existsSync(GOODBYE_BG_DIR)) fs.mkdirSync(GOODBYE_BG_DIR, { recursive: tr
 
 // ============================================================
 // UKURAN BACKGROUND IMAGE
-// - Width  : 1000 px
-// - Height : 400 px
-// - Rasio  : 2.5 : 1
+// - Width  : 1280 px
+// - Height : 720 px
+// - Rasio  : 16 : 9
 // - Format : PNG / JPG / WEBP
 // - Max    : 8 MB
 // ============================================================
-const WIDTH  = 1000;
-const HEIGHT = 400;
+const WIDTH  = 1280;
+const HEIGHT = 720;
 
-// ── Register font agar teks PASTI muncul ──
-// Root cause teks tidak muncul: @napi-rs/canvas tidak menemukan
-// font system, sehingga semua karakter dirender sebagai □ (kotak).
-// Solusi: daftarkan font dari path sistem yang pasti ada.
+// Scale factor dari ukuran lama (1000x400) ke baru (1280x720)
+// scaleX = 1280/1000 = 1.28 | scaleY = 720/400 = 1.80
+// Gunakan rata-rata keduanya agar elemen proporsional di kedua arah
+const SCALE = (1280 / 1000 + 720 / 400) / 2; // ≈ 1.54
+
+// ── Register font ──
 let FONT_FAMILY = 'sans-serif';
 
 const SYSTEM_FONT_PATHS = [
@@ -135,16 +137,17 @@ async function _generateImage(opts) {
   ctx.fillStyle = 'rgba(0,0,0,0.50)';
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  // ── Avatar ──
-  const avatarSize = 150;
-  const avatarX    = WIDTH / 2;
-  const avatarY    = HEIGHT / 2 - 30;
+  // ── Posisi avatar (proporsional) ──
+  // Lama: avatarSize=150, avatarX=500, avatarY=170 (HEIGHT/2 - 30)
+  const avatarSize = Math.round(150 * SCALE); // ≈ 231
+  const avatarX    = WIDTH / 2;               // 640
+  const avatarY    = Math.round(HEIGHT / 2 - 30 * SCALE); // ≈ 314
 
   // Border lingkaran
   ctx.save();
   ctx.beginPath();
-  ctx.arc(avatarX, avatarY, avatarSize / 2 + 6, 0, Math.PI * 2);
-  ctx.fillStyle = isGoodbye ? '#ed4245' : '#ffffff';
+  ctx.arc(avatarX, avatarY, avatarSize / 2 + Math.round(6 * SCALE), 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
   ctx.fill();
   ctx.restore();
 
@@ -167,25 +170,34 @@ async function _generateImage(opts) {
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'alphabetic';
   ctx.shadowColor   = 'rgba(0,0,0,0.9)';
-  ctx.shadowBlur    = 10;
-  ctx.shadowOffsetX = 2;
-  ctx.shadowOffsetY = 2;
+  ctx.shadowBlur    = Math.round(10 * SCALE);
+  ctx.shadowOffsetX = Math.round(2  * SCALE);
+  ctx.shadowOffsetY = Math.round(2  * SCALE);
 
-  // Label atas (SELAMAT DATANG / SELAMAT TINGGAL)
-  ctx.font      = `bold 22px ${FONT_FAMILY}`;
-  ctx.fillStyle = isGoodbye ? '#ed4245' : '#57f287';
+  // Label atas (— WELCOME — / — GOODBYE —)
+  // Lama: font 22px, posisi avatarY - avatarSize/2 - 18
+  const labelFontSize = Math.round(22 * SCALE); // ≈ 34
+  const labelY        = avatarY - avatarSize / 2 - Math.round(18 * SCALE); // ≈ offset -28
+  ctx.font      = `bold ${labelFontSize}px ${FONT_FAMILY}`;
+  ctx.fillStyle = textColor;   // ikut settingan welcomeTextColor / goodbyeTextColor
   const label   = isGoodbye ? '— GOODBYE —' : '— WELCOME —';
-  ctx.fillText(label, WIDTH / 2, avatarY - avatarSize / 2 - 18);
+  ctx.fillText(label, WIDTH / 2, labelY);
 
   // Username
-  ctx.font      = `bold 44px ${FONT_FAMILY}`;
+  // Lama: font 44px, posisi avatarY + avatarSize/2 + 55
+  const usernameFontSize = Math.round(44 * SCALE); // ≈ 68
+  const usernameY        = avatarY + avatarSize / 2 + Math.round(55 * SCALE); // ≈ +85
+  ctx.font      = `bold ${usernameFontSize}px ${FONT_FAMILY}`;
   ctx.fillStyle = textColor;
-  ctx.fillText(username, WIDTH / 2, avatarY + avatarSize / 2 + 55);
+  ctx.fillText(username, WIDTH / 2, usernameY);
 
   // Pesan welcome/goodbye
-  ctx.font      = `26px ${FONT_FAMILY}`;
+  // Lama: font 26px, posisi avatarY + avatarSize/2 + 98
+  const msgFontSize = Math.round(26 * SCALE); // ≈ 40
+  const msgY        = avatarY + avatarSize / 2 + Math.round(98 * SCALE); // ≈ +151
+  ctx.font      = `${msgFontSize}px ${FONT_FAMILY}`;
   ctx.fillStyle = hexToRgba(textColor, 0.90);
-  ctx.fillText(resolvedText, WIDTH / 2, avatarY + avatarSize / 2 + 98);
+  ctx.fillText(resolvedText, WIDTH / 2, msgY);
 
   // Reset shadow
   ctx.shadowColor   = 'transparent';
@@ -210,7 +222,7 @@ function drawDefaultBg(ctx, isGoodbye = false) {
 }
 
 function hexToRgba(hex, alpha) {
-  const h = hex.replace('#', '');
+  const h    = hex.replace('#', '');
   const full = h.length === 3
     ? h.split('').map(c => c + c).join('')
     : h;

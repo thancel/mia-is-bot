@@ -11,14 +11,15 @@ if (!fs.existsSync(CONFIG_FILE)) fs.writeFileSync(CONFIG_FILE, '{}', 'utf8');
  * Config structure per guild:
  * {
  *   "GUILD_ID": {
- *     welcomeChannelId : string | null,
- *     goodbyeChannelId : string | null,
- *     logChannelId     : string | null,
- *     welcomeText      : string | null,
- *     welcomeColor     : string | null,
- *     goodbyeText      : string | null,
- *     goodbyeColor     : string | null,
- *     updatedAt        : ISO string
+ *     welcomeChannelId  : string | null,
+ *     goodbyeChannelId  : string | null,
+ *     welcomeText       : string | null,
+ *     goodbyeText       : string | null,
+ *     welcomeTextColor  : string | null,   // text color on welcome image
+ *     goodbyeTextColor  : string | null,   // text color on goodbye image
+ *     welcomeEmbedColor : string | null,   // embed color for welcome
+ *     goodbyeEmbedColor : string | null,   // embed color for goodbye
+ *     updatedAt         : ISO string
  *   }
  * }
  */
@@ -35,9 +36,14 @@ function writeAll(data) {
 function getConfig(guildId) {
   const all = readAll();
   return all[guildId] || {
-    welcomeChannelId: null,
-    goodbyeChannelId: null,
-    logChannelId:     null,
+    welcomeChannelId:  null,
+    goodbyeChannelId:  null,
+    welcomeText:       null,
+    goodbyeText:       null,
+    welcomeTextColor:  null,
+    goodbyeTextColor:  null,
+    welcomeEmbedColor: null,
+    goodbyeEmbedColor: null,
   };
 }
 
