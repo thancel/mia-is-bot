@@ -1,25 +1,70 @@
-# 🤖 Discord Bot Serbaguna
+# 🤖 Mia Discord Bot
 
-Bot Discord berbasis **Discord.js v14** dengan fitur:
-- 🛡️ **Moderasi** — Ban, Kick, Mute, Warn, Purge, Unban
-- 🎙️ **Temp Voice** — Auto-create & auto-delete voice channel pribadi
-- 🎌 **Anime/Manga** — Cari info via AniList GraphQL dengan pilihan interaktif
-- 👋 **Welcome & Goodbye** — Embed otomatis saat member masuk/keluar
+A feature-rich Discord bot built with **Discord.js v14**.
+
+**Features:**
+- 🛡️ **Moderation** — Ban, Kick, Mute, Unmute, Warn, Purge, Unban
+- 🎙️ **Temp Voice** — Auto-create & delete private voice rooms with an interactive control panel
+- 🎌 **Anime / Manga** — Search info via AniList GraphQL with interactive selection menus
+- 👋 **Welcome & Goodbye** — Custom image cards with embed notifications
 - ℹ️ **Info** — Server info, User info, Help
 
 ---
 
-## 📋 Persyaratan
+## 📋 Requirements
 
-- [Node.js](https://nodejs.org) v18+ (disarankan v20 LTS)
-- Bot Token dari [Discord Developer Portal](https://discord.com/developers/applications)
-- Intents yang diaktifkan: **SERVER MEMBERS INTENT** & **MESSAGE CONTENT INTENT**
+- **[Node.js](https://nodejs.org) v20 or later** (minimum v20.0.0)
+  > Required because `@supabase/supabase-js` needs Node ≥ 20.
+  > Recommended: **v20 LTS** or **v22 LTS** for best stability.
+- Bot Token from [Discord Developer Portal](https://discord.com/developers/applications)
+- Intents enabled: **SERVER MEMBERS INTENT** & **MESSAGE CONTENT INTENT**
 
 ---
 
-## 🚀 Instalasi
+## 🗄️ Database
 
-### 1. Clone / Download project ini
+| Mode | When used | Notes |
+|------|-----------|-------|
+| **Supabase** | `SUPABASE_URL` + `SUPABASE_KEY` filled in `.env` | Cloud PostgreSQL. Recommended for production. |
+| **JSON file** | `.env` left empty | Saves to `data/db.json`. Persistent across restarts. No setup needed. |
+
+### Setup Supabase (optional)
+
+1. Create a project at [supabase.com](https://supabase.com)
+2. Go to **Settings → API**, copy **Project URL** and **anon public key**
+3. Open **SQL Editor** in the dashboard and run:
+
+```sql
+CREATE TABLE IF NOT EXISTS guild_configs (
+  guild_id TEXT PRIMARY KEY,
+  data     JSONB NOT NULL DEFAULT '{}'
+);
+
+CREATE TABLE IF NOT EXISTS warnings (
+  id        BIGSERIAL PRIMARY KEY,
+  guild_id  TEXT   NOT NULL,
+  user_id   TEXT   NOT NULL,
+  reason    TEXT   NOT NULL,
+  mod_id    TEXT   NOT NULL,
+  mod_tag   TEXT   NOT NULL,
+  timestamp BIGINT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_warnings ON warnings (guild_id, user_id);
+
+CREATE TABLE IF NOT EXISTS temp_voices (
+  channel_id TEXT PRIMARY KEY,
+  owner_id   TEXT NOT NULL,
+  join_order JSONB NOT NULL DEFAULT '[]'
+);
+```
+
+4. Fill `SUPABASE_URL` and `SUPABASE_KEY` in `.env`
+
+---
+
+## 🚀 Installation
+
+### 1. Clone / Download
 
 ```bash
 git clone <repo-url>
@@ -32,134 +77,181 @@ cd discord-bot
 npm install
 ```
 
-### 3. Setup file `.env`
+### 3. Configure `.env`
 
-Salin `.env.example` menjadi `.env` lalu isi:
+Copy `.env.example` to `.env` and fill in:
 
 ```env
 TOKEN=your_bot_token_here
 CLIENT_ID=your_client_id_here
-GUILD_ID=your_guild_id_here          # Opsional, untuk dev (command langsung aktif)
+GUILD_ID=your_guild_id_here      # Optional — for instant command deploy during development
 
-WELCOME_CHANNEL_ID=channel_id_here   # Channel untuk pesan selamat datang
-GOODBYE_CHANNEL_ID=channel_id_here   # Channel untuk pesan perpisahan
-LOG_CHANNEL_ID=channel_id_here       # Channel untuk log moderasi
+# Optional — fill both for Supabase, leave empty to use JSON file
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_KEY=your_anon_key_here
 ```
 
-### 4. Deploy Slash Commands
+### 4. Deploy slash commands
 
 ```bash
 npm run deploy
 ```
 
-> Jika `GUILD_ID` diisi → command aktif **instan** (untuk development).
-> Jika tidak → command aktif **global** dalam ~1 jam.
+> `GUILD_ID` filled → commands register **instantly** (development).
+> `GUILD_ID` empty  → commands register **globally** (~1 hour).
 
-### 5. Jalankan Bot
+### 5. Start the bot
 
 ```bash
 npm start
 
-# Atau mode development (auto-restart on file change)
+# Development mode (auto-restart on file change)
 npm run dev
 ```
 
 ---
 
-## 📁 Struktur Folder
+## 📁 Project Structure
 
 ```
 discord-bot/
-├── index.js                    # Entry point
-├── deploy-commands.js          # Script deploy slash commands
-├── .env                        # Token & konfigurasi (jangan di-commit!)
-├── .env.example                # Template .env
+├── index.js                      # Entry point
+├── deploy-commands.js            # Slash command deployment script
+├── .env                          # Tokens & config (never commit!)
+├── .env.example                  # Template
+├── data/
+│   ├── db.json                   # JSON database (created automatically)
+│   ├── welcome_bg/<guildId>.png  # Per-guild welcome backgrounds
+│   └── goodbye_bg/<guildId>.png  # Per-guild goodbye backgrounds
 └── src/
     ├── commands/
     │   ├── anime/
-    │   │   └── anime.js        # /anime — Cari anime & manga
+    │   │   ├── anime.js          # /anime
+    │   │   └── manga.js          # /manga
     │   ├── moderation/
-    │   │   └── mod.js          # /ban /kick /mute /unmute /warn /purge /unban
+    │   │   ├── mod.js            # /ban /kick /mute /unmute /purge /unban
+    │   │   ├── warn.js           # /warn add/list/remove/clear
+    │   │   ├── Welcome.js        # /welcome setup/background/text/color/preview/reset
+    │   │   └── Goodbye.js        # /goodbye setup/background/text/color/preview/reset
     │   ├── voice/
-    │   │   └── tempvoice.js    # /tempvoice
+    │   │   └── tempvoice.js      # /tempvoice setup/kick/panel
     │   └── info/
-    │       ├── help.js         # /help
-    │       └── info.js         # /serverinfo /userinfo
+    │       ├── help.js           # /help
+    │       ├── info.js           # /serverinfo /userinfo
+    │       └── say.js            # /say
+    ├── db/
+    │   ├── index.js              # Auto-selects adapter (Supabase / JSON)
+    │   └── adapters/
+    │       ├── supabase.js       # Supabase adapter
+    │       └── json.js           # JSON file adapter (fallback)
     ├── events/
-    │   ├── ready.js            # Bot online
-    │   ├── interactionCreate.js # Handle slash commands & select menus
-    │   ├── guildMemberAdd.js   # Welcome message
-    │   ├── guildMemberRemove.js # Goodbye message
-    │   └── voiceStateUpdate.js # Temp voice auto-create/delete
-    └── handlers/
-        ├── commandHandler.js   # Load semua commands
-        └── eventHandler.js     # Load semua events
+    │   ├── ready.js              # Bot online + refresh voice panels
+    │   ├── interactionCreate.js  # Slash commands, buttons, modals
+    │   ├── guildMemberAdd.js     # Welcome message
+    │   ├── guildMemberRemove.js  # Goodbye message
+    │   └── voiceStateUpdate.js   # Temp voice auto-create/delete/ownership
+    ├── handlers/
+    │   ├── commandHandler.js     # Load all commands
+    │   └── eventHandler.js       # Load all events
+    └── utils/
+        ├── embedUtils.js         # randomColor(), quickEmbed(), fixedEmbed()
+        ├── guildConfig.js        # Thin async wrapper around db
+        ├── anilist.js            # AniList GraphQL helper
+        └── welcomeImage.js       # Welcome/goodbye image generator
 ```
 
 ---
 
-## 📖 Daftar Command
-
-### 🎌 Anime & Manga
-| Command | Deskripsi |
-|---------|-----------|
-| `/anime judul:<query> [tipe:Anime\|Manga]` | Cari anime/manga. Jika ada banyak hasil, muncul select menu pilihan |
+## 📖 Commands
 
 ### 🎙️ Temp Voice
-| Command | Deskripsi |
-|---------|-----------|
-| `/tempvoice setup kategori:<channel>` | [Admin] Buat trigger channel "➕ Buat Voice" |
-| `/tempvoice rename nama:<nama>` | Ganti nama channel kamu |
-| `/tempvoice limit jumlah:<0-99>` | Set batas user (0 = unlimited) |
-| `/tempvoice kick user:<@user>` | Kick user dari channel kamu |
-| `/tempvoice lock` | Kunci/buka voice channel kamu |
-| `/tempvoice transfer user:<@user>` | Transfer ownership ke user lain |
-| `/tempvoice info` | Lihat info channel saat ini |
+| Command | Description |
+|---------|-------------|
+| `/tempvoice setup <category>` | [Admin] Create trigger channel + control panel |
+| `/tempvoice kick <user>` | Kick a user from your temp channel |
+| `/tempvoice panel` | [Admin] Refresh and resend the control panel |
 
-### 🛡️ Moderasi
-| Command | Deskripsi |
-|---------|-----------|
-| `/ban user:<@user> [alasan] [hapus_pesan]` | Ban user |
-| `/unban userid:<id> [alasan]` | Unban user berdasarkan ID |
-| `/kick user:<@user> [alasan]` | Kick user |
-| `/mute user:<@user> durasi:<menit> [alasan]` | Timeout user |
-| `/unmute user:<@user> [alasan]` | Hapus timeout user |
-| `/warn add user:<@user> alasan:<text>` | Tambah peringatan |
-| `/warn list user:<@user>` | Lihat daftar peringatan |
-| `/warn clear user:<@user>` | Hapus semua peringatan |
-| `/purge jumlah:<1-100> [user:<@user>]` | Hapus pesan bulk |
+**Panel Buttons** *(in `#voice-panel`)*
+| Button | Action |
+|--------|--------|
+| 🔒 **Lock** | Prevent new users from joining |
+| 🔓 **Unlock** | Allow everyone to join |
+| ✏️ **Rename** | Rename the channel (opens a form) |
+| 👥 **Limit** | Set max user count (opens a form) |
+| 📡 **Bitrate** | Adjust audio quality (opens a form) |
+| ℹ️ **Info** | Show channel info (only visible to you) |
+
+> ℹ️ **On bot restart**, the panel is automatically refreshed — old messages are deleted and a fresh panel is sent.
+
+### 🎌 Anime & Manga
+| Command | Description |
+|---------|-------------|
+| `/anime <title>` | Search anime via AniList. Shows selection if multiple results. |
+| `/manga <title>` | Search manga via AniList. Shows selection if multiple results. |
+
+### 🛡️ Moderation
+| Command | Description |
+|---------|-------------|
+| `/ban <user> <reason> [hours]` | Ban (optional: temporary) |
+| `/unban <id> <reason>` | Unban by user ID |
+| `/kick <user> <reason>` | Kick from server |
+| `/mute <user> <minutes> <reason>` | Timeout a user |
+| `/unmute <user> <reason>` | Remove timeout |
+| `/warn add <user> <reason>` | Add a warning |
+| `/warn list <user>` | List warnings |
+| `/warn remove <user> <number>` | Remove a specific warning |
+| `/warn clear <user>` | Clear all warnings |
+| `/purge <amount> [user]` | Delete messages in bulk (max 100) |
+
+### 👋 Welcome & Goodbye
+| Command | Description |
+|---------|-------------|
+| `/welcome setup <channel>` | Set the welcome channel |
+| `/welcome background <image>` | Upload a background (any size, auto-resized) |
+| `/welcome text <target> <message>` | Set embed or image text |
+| `/welcome color <type> <hex>` | Set text or embed color |
+| `/welcome preview` | Preview the welcome image |
+| `/welcome reset` | Reset all welcome settings |
+| `/goodbye ...` | Same subcommands as `/welcome` |
+
+> **Background images** can be any size — they are automatically scaled to cover the 1280×720 canvas.
+> **Image fonts:** WELCOME/GOODBYE label uses **Bebas Neue**, username and sub-text use **Montserrat**.
 
 ### ℹ️ Info
-| Command | Deskripsi |
-|---------|-----------|
-| `/help` | Tampilkan semua command |
-| `/serverinfo` | Info lengkap server |
-| `/userinfo [user:<@user>]` | Info lengkap user |
+| Command | Description |
+|---------|-------------|
+| `/help` | Show all commands |
+| `/serverinfo` | Display server details |
+| `/userinfo [user]` | Display user details |
+| `/say <message> [channel]` | Send a message as the bot |
 
 ---
 
-## ⚙️ Setup Temp Voice
+## ⚙️ Temp Voice Setup
 
-1. Jalankan `/tempvoice setup kategori:<pilih kategori>`
-2. Bot otomatis membuat channel **"➕ Buat Voice"** di kategori tersebut
-3. Saat user join channel tersebut, bot otomatis:
-   - Membuat voice channel baru dengan nama user
-   - Memberi owner permission ke user tersebut
-   - Memindahkan user ke channel baru
-4. Saat channel kosong (semua keluar), channel otomatis dihapus
+1. Run `/tempvoice setup category:<choose a category>`
+2. The bot creates two channels:
+   - 🔊 **➕ Create Voice** — Join to create a private room.
+   - 💬 **🎙️・voice-panel** — Text channel with the permanent control panel.
+3. When a user joins **➕ Create Voice**, the bot:
+   - Creates a new voice channel named after the user
+   - Grants owner permissions
+   - Moves the user into the new channel
+4. When the channel is empty, it is automatically deleted.
+5. If the **owner leaves** while others remain, ownership transfers to the **earliest member** who joined. The new owner receives a DM notification.
 
 ---
 
-## 🔐 Permissions yang Dibutuhkan Bot
+## 🔐 Required Bot Permissions
 
-Di Discord Developer Portal → Bot → Privileged Gateway Intents:
-- ✅ **SERVER MEMBERS INTENT**
-- ✅ **MESSAGE CONTENT INTENT**
+**Discord Developer Portal → Bot → Privileged Gateway Intents:**
+- ✅ SERVER MEMBERS INTENT
+- ✅ MESSAGE CONTENT INTENT
 
-Permissions bot di server:
+**Server permissions:**
 - Manage Channels, Manage Roles
 - Kick Members, Ban Members
-- Moderate Members (untuk timeout)
+- Moderate Members (for timeout)
 - Manage Messages
 - Move Members
 - Send Messages, Embed Links
@@ -167,8 +259,9 @@ Permissions bot di server:
 
 ---
 
-## 📝 Catatan
+## 📝 Notes
 
-- **Warn system** menggunakan in-memory storage. Untuk production, gunakan database (MongoDB, SQLite, dll.)
-- **Temp voice** data juga in-memory; restart bot akan reset tracking (channel yang sudah ada tidak akan auto-delete sampai kosong)
-- AniList API **gratis dan tanpa API key** — rate limit generous untuk penggunaan normal
+- **JSON mode** (`data/db.json`): Data is saved to disk on every write and persists across bot restarts. No external setup required.
+- **Supabase mode**: Persistent cloud PostgreSQL. Recommended for production or multi-instance deployments.
+- All embeds use **random colors** by default, except welcome/goodbye embeds which use the color configured via `/welcome color` or `/goodbye color`.
+- **AniList API** is free and requires no API key.

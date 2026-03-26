@@ -187,6 +187,7 @@ function selectLabel(media) {
 const TIMEOUT_MS = 5 * 60 * 1000;
 
 async function runSearch(interaction, type) {
+  // Defer PUBLIC → hasil embed bisa dilihat semua orang
   await interaction.deferReply({ ephemeral: false });
 
   const query = interaction.options.getString('title');
@@ -197,34 +198,35 @@ async function runSearch(interaction, type) {
   } catch (err) {
     console.error('[AniList] Error:', err);
     return interaction.editReply({
-      embeds: [new EmbedBuilder().setColor(0xed4245).setDescription(
-        `❌ Failed to reach AniList API: \`${err.message}\`\nPlease try again later.`
-      )],
+      content: `❌ Failed to reach AniList API: \`${err.message}\`\nPlease try again later.`,
     });
   }
 
   if (!results.length) {
-    return interaction.editReply({
-      embeds: [new EmbedBuilder().setColor(0xed4245).setDescription(`❌ No results found for: **${query}**`)],
-    });
+    return interaction.editReply({ content: `❌ No results found for: **${query}**` });
   }
 
-  // Single result → show embed directly
+  // Single result → embed public langsung
   if (results.length === 1) {
     return interaction.editReply({ embeds: [buildEmbed(results[0])] });
   }
 
-  // Multiple results → embed + select menu in ONE message (public)
-  const typeLabel = type === 'ANIME' ? '🎌 Anime' : '📚 Manga';
+  // Banyak hasil:
+  // 1. Edit reply (public) dengan pesan singkat dulu
+  // 2. Kirim select menu via followUp EPHEMERAL → hanya user yg search yg bisa pilih
   const previewEmbed = new EmbedBuilder()
     .setColor(0xffa500)
     .setTitle(`🔍 Search Results: "${query}"`)
     .setDescription(
-      `Found **${results.length}** results for ${typeLabel}.\n` +
-      `<@${interaction.user.id}>, choose from the dropdown below.`
+      `Found **${results.length}** results for ${type === 'ANIME' ? '🎌 Anime' : '📚 Manga'}.\n` +
+      `<@${interaction.user.id}> is choosing a title...`
     )
     .setFooter({ text: '⏱️ Selection expires in 5 minutes' });
 
+  // Public message — semua orang bisa lihat sedang ada pencarian
+  await interaction.editReply({ embeds: [previewEmbed] });
+
+  // Select menu EPHEMERAL → hanya user yg search
   const options = results.slice(0, 10).map(media => {
     const title = (media.title?.english || media.title?.romaji || 'Unknown').slice(0, 100);
     const { fmt, year, status } = selectLabel(media);
@@ -238,19 +240,28 @@ async function runSearch(interaction, type) {
   const customId = `anilist_${type.toLowerCase()}_${interaction.id}`;
   const select = new StringSelectMenuBuilder()
     .setCustomId(customId)
-    .setPlaceholder('Select a title...')
+    .setPlaceholder('📋 Select a title...')
     .addOptions(options);
 
   const row = new ActionRowBuilder().addComponents(select);
 
-  // Single public message with embed + dropdown
-  await interaction.editReply({ embeds: [previewEmbed], components: [row] });
+  // followUp ephemeral → hanya user ini yang lihat menu pilihan
+  let menuMsg;
+  try {
+    menuMsg = await interaction.followUp({
+      content: '👇 Choose the title you meant:',
+      components: [row],
+      ephemeral: true,
+    });
+  } catch (err) {
+    console.error('[AniList] Failed to send select menu:', err);
+    return;
+  }
 
-  // Collect selection — only the user who ran the command can pick
-  const collector = interaction.channel.createMessageComponentCollector({
+  const collector = menuMsg.createMessageComponentCollector({
     componentType: ComponentType.StringSelect,
     time: TIMEOUT_MS,
-    filter: i => i.user.id === interaction.user.id && i.customId === customId,
+    filter: i => i.user.id === interaction.user.id,
   });
 
   collector.on('collect', async i => {
@@ -259,44 +270,46 @@ async function runSearch(interaction, type) {
       const media = results.find(m => m.id === selectedId);
 
       if (!media) {
-        await i.update({
-          embeds: [new EmbedBuilder().setColor(0xed4245).setDescription('❌ Data not found. Please search again.')],
-          components: [],
-        });
+        await i.update({ content: '❌ Data not found. Please search again.', components: [] });
         return;
       }
 
-      // Replace the whole message with the result embed, no dropdown
-      await i.update({ embeds: [buildEmbed(media)], components: [] });
+      // Hapus komponen lalu hapus pesan ephemeral agar UI bersih
+      await i.update({ components: [] });
+      await i.deleteReply();
+
+      // Edit public reply dengan embed hasil
+      await interaction.editReply({ embeds: [buildEmbed(media)], content: null });
+
       collector.stop('selected');
     } catch (err) {
       console.error('[AniList] Error on select:', err);
       try {
-        await i.update({
-          embeds: [new EmbedBuilder().setColor(0xed4245).setDescription('❌ An error occurred. Please try again.')],
-          components: [],
-        });
+        await i.update({ content: '❌ An error occurred. Please try again.', components: [] });
       } catch {}
     }
   });
 
   collector.on('end', async (_, reason) => {
     if (reason === 'selected') return;
-    // Timeout → disable dropdown, update embed
+    // Timeout → disable menu ephemeral + update public msg
     try {
       const disabledSelect = StringSelectMenuBuilder.from(select).setDisabled(true);
+      await interaction.followUp({
+        content: '⏱️ Selection expired.',
+        components: [new ActionRowBuilder().addComponents(disabledSelect)],
+        ephemeral: true,
+      });
+      // Update public reply jadi expired
       const expiredEmbed = new EmbedBuilder()
         .setColor(0x99aab5)
         .setTitle(`🔍 Search Results: "${query}"`)
         .setDescription(
-          `Found **${results.length}** results, but <@${interaction.user.id}> didn't select.\n` +
+          `Found **${results.length}** results, but <@${interaction.user.id}> didn't select any.\n` +
           `Run the command again to search.`
         )
         .setFooter({ text: '⏱️ Selection expired after 5 minutes' });
-      await interaction.editReply({
-        embeds: [expiredEmbed],
-        components: [new ActionRowBuilder().addComponents(disabledSelect)],
-      });
+      await interaction.editReply({ embeds: [expiredEmbed], content: null });
     } catch {}
   });
 }

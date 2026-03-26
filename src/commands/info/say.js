@@ -1,44 +1,37 @@
-const {
-  SlashCommandBuilder,
-  PermissionFlagsBits,
-} = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('say')
-    .setDescription('📢 Kirim pesan sebagai bot')
+    .setDescription('📢 Send a message as the bot')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .addStringOption(opt =>
-      opt
-        .setName('message')
-        .setDescription('Pesan yang akan dikirim')
-        .setRequired(true)
-        .setMinLength(1)
-        .setMaxLength(2000)
+      opt.setName('message').setDescription('Message to send').setRequired(true).setMinLength(1).setMaxLength(2000)
     )
     .addChannelOption(opt =>
-      opt
-        .setName('channel')
-        .setDescription('Channel tujuan (default: channel saat ini)')
-        .setRequired(false)
+      opt.setName('channel').setDescription('Destination channel (default: current channel)').setRequired(false)
     ),
 
   async execute(interaction) {
     const message = interaction.options.getString('message');
     const channel = interaction.options.getChannel('channel') ?? interaction.channel;
 
-    // Pastikan channel bisa dikirim pesan
     if (!channel.isTextBased()) {
-      return interaction.reply({ content: '❌ Channel tersebut bukan text channel!', ephemeral: true });
+      return interaction.reply({
+        embeds: [new EmbedBuilder().setColor(0xed4245).setDescription('❌ That channel is not a text channel.')],
+        ephemeral: true,
+      });
     }
 
     try {
       await channel.send(message);
-      // Delete the slash command interaction tanpa reply agar tidak ada jejak
       await interaction.reply({ content: '✅', ephemeral: true });
-      await interaction.deleteReply();
+      await interaction.deleteReply().catch(() => {});
     } catch (err) {
-      return interaction.reply({ content: `❌ Gagal mengirim pesan: ${err.message}`, ephemeral: true });
+      return interaction.reply({
+        embeds: [new EmbedBuilder().setColor(0xed4245).setDescription(`❌ Failed to send message: ${err.message}`)],
+        ephemeral: true,
+      });
     }
   },
 };

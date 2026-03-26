@@ -1,39 +1,46 @@
 const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
-const { getConfig } = require('../utils/guildConfig');
+const db = require('../db');
 const { generateWelcomeImage } = require('../utils/welcomeImage');
+const { randomColor } = require('../utils/embedUtils');
 
 module.exports = {
   name: 'guildMemberAdd',
-  async execute(member, client) {
-    const cfg = getConfig(member.guild.id);
+  async execute(member) {
+    const cfg = await db.getGuildConfig(member.guild.id);
     if (!cfg.welcomeChannelId) return;
     const channel = member.guild.channels.cache.get(cfg.welcomeChannelId);
     if (!channel) return;
+
+    const embedColor = cfg.welcomeEmbedColor || randomColor();
 
     try {
       const buffer = await generateWelcomeImage({
         avatarURL:   member.user.displayAvatarURL({ extension: 'png', size: 256 }),
         username:    member.displayName,
         guildId:     member.guild.id,
-        welcomeText: cfg.welcomeText  || 'Welcome to {server}! · Member {count}',
-        textColor:   cfg.welcomeColor || '#ffffff',
+        welcomeText: cfg.welcomeImgText || 'Welcome to {server}! Member {count}',
+        textColor:   cfg.welcomeTextColor || '#ffffff',
         guildName:   member.guild.name,
         memberCount: member.guild.memberCount,
       });
 
       const attachment = new AttachmentBuilder(buffer, { name: 'welcome.png' });
 
+      const desc = cfg.welcomeEmbedText
+        ? cfg.welcomeEmbedText
+            .replace(/{user}/g,   member.displayName)
+            .replace(/{server}/g, member.guild.name)
+            .replace(/{count}/g,  `#${member.guild.memberCount}`)
+        : `👋 Hey ${member}! Welcome to **${member.guild.name}**!\nYou are member **#${member.guild.memberCount}**.`;
+
       const embed = new EmbedBuilder()
-        .setColor(cfg.welcomeColor || '#57f287')
-        .setDescription(
-          `👋 Hey ${member}! Welcome to **${member.guild.name}**!\n` +
-          `You are member **#${member.guild.memberCount}**!`
-        )
+        .setColor(embedColor)
+        .setDescription(desc)
         .setImage('attachment://welcome.png')
         .addFields(
-          { name: '📛 Username',    value: member.user.tag,                                                            inline: true },
-          { name: '🆔 ID',          value: member.user.id,                                                             inline: true },
-          { name: '📅 Account Age', value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`,                 inline: true },
+          { name: '📛 Username',    value: member.user.tag,                                            inline: true },
+          { name: '🆔 ID',          value: member.user.id,                                             inline: true },
+          { name: '📅 Account Age', value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`, inline: true },
         )
         .setFooter({ text: member.guild.name, iconURL: member.guild.iconURL({ dynamic: true }) })
         .setTimestamp();
@@ -43,17 +50,12 @@ module.exports = {
       console.error('❌ Welcome image error:', err);
       channel.send({
         content: `${member}`,
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0x57f287)
-            .setTitle('👋 Welcome!')
-            .setDescription(
-              `Hey ${member}! Welcome to **${member.guild.name}**!\n` +
-              `You are member **#${member.guild.memberCount}**!`
-            )
-            .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-            .setTimestamp(),
-        ],
+        embeds: [new EmbedBuilder()
+          .setColor(embedColor)
+          .setTitle('👋 Welcome!')
+          .setDescription(`Hey ${member}! Welcome to **${member.guild.name}**!\nYou are member **#${member.guild.memberCount}**.`)
+          .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+          .setTimestamp()],
       });
     }
   },

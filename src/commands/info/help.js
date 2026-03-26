@@ -1,26 +1,30 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { randomColor } = require('../../utils/embedUtils');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('help')
-    .setDescription('📖 Show all bot commands'),
+    .setDescription('📖 Show all available commands'),
 
   async execute(interaction) {
     const embed = new EmbedBuilder()
-      .setColor(0x5865f2)
-      .setTitle('📖 Bot Commands')
+      .setColor(randomColor())
+      .setTitle('📖 Command List')
       .setThumbnail(interaction.client.user.displayAvatarURL())
       .addFields(
         {
-          name: '⚙️ Server Settings',
+          name: '🎙️ Temp Voice',
           value: [
-            '`/set view` — View all current settings',
-            '`/set welcome <#channel>` — Set welcome channel',
-            '`/set goodbye <#channel>` — Set goodbye channel',
-            '`/set log <#channel>` — Set moderation log channel',
-            '`/set mutedrole <@role>` — Set muted role',
-            '`/set remove <setting>` — Remove a setting',
-            '`/set reset` — Reset all settings',
+            '`/tempvoice setup <category>` — [Admin] Create trigger channel + control panel',
+            '`/tempvoice kick <user>` — Kick a user from your temporary channel',
+            '`/tempvoice panel` — [Admin] Refresh and resend the control panel',
+            '',
+            '**Panel Buttons** *(in #voice-panel)*',
+            '🔒 **Lock / Unlock** — Toggle channel access',
+            '✏️ **Rename** — Change channel name',
+            '👥 **Limit** — Set max user count',
+            '📡 **Bitrate** — Adjust audio quality',
+            'ℹ️ **Info** — View channel info (only you can see)',
           ].join('\n'),
         },
         {
@@ -31,41 +35,38 @@ module.exports = {
           ].join('\n'),
         },
         {
-          name: '🎙️ Temp Voice',
+          name: '🛡️ Moderation',
           value: [
-            '`/tempvc setup <category>` — [Admin] Setup temp voice',
-            '`/tempvc rename <name>` — Rename your channel',
-            '`/tempvc limit <amount>` — Set user limit',
-            '`/tempvc kick <user>` — Kick user from channel',
-            '`/tempvc lock` — Toggle lock/unlock',
-            '`/tempvc transfer <user>` — Transfer ownership',
-            '`/tempvc info` — View channel info',
+            '`/ban <user> <reason> [hours]` — Ban a user (optional: temporary)',
+            '`/unban <id> <reason>` — Unban a user by ID',
+            '`/kick <user> <reason>` — Kick a user from the server',
+            '`/mute <user> <duration> <reason>` — Timeout a user',
+            '`/unmute <user> <reason>` — Remove a user\'s timeout',
+            '`/warn add/list/remove/clear` — Manage user warnings',
+            '`/purge <amount> [user]` — Bulk delete messages (max 100)',
+            '`/log set/remove/status` — Configure the moderation log channel',
           ].join('\n'),
         },
         {
-          name: '🛡️ Moderation',
+          name: '👋 Welcome & Goodbye',
           value: [
-            '`/ban <user> <reason> [hours]` — Ban user (optional temp)',
-            '`/unban <id> <reason>` — Unban user',
-            '`/kick <user> <reason>` — Kick user',
-            '`/mute <user> <duration> <reason>` — Timeout user',
-            '`/unmute <user> <reason>` — Remove timeout',
-            '`/warn add/list/remove/clear` — Manage warnings',
-            '`/purge <amount> [user]` — Bulk delete messages',
+            '`/welcome setup/remove/background/text/color/preview/reset`',
+            '`/goodbye setup/remove/background/text/color/preview/reset`',
           ].join('\n'),
         },
         {
           name: 'ℹ️ Info',
           value: [
             '`/help` — Show this message',
-            '`/serverinfo` — Server information',
-            '`/userinfo [user]` — User information',
+            '`/serverinfo` — Display server information',
+            '`/userinfo [user]` — Display user information',
+            '`/say <message> [channel]` — Send a message as the bot',
           ].join('\n'),
         },
       )
       .setFooter({ text: `Requested by ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() })
       .setTimestamp();
 
-    return interaction.reply({ embeds: [embed] });
+    return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   },
 };

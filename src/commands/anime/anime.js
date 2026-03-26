@@ -4,11 +4,11 @@ const { runSearch } = require('../../utils/anilist');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('anime')
-    .setDescription('🎌 Cari informasi anime via AniList')
+    .setDescription('🎌 Search for anime information')
     .addStringOption(opt =>
       opt
-        .setName('judul')
-        .setDescription('Judul anime yang ingin dicari')
+        .setName('title')
+        .setDescription('The title of the anime you want to search for')
         .setRequired(true)
     ),
 
