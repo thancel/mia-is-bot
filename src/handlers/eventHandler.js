@@ -6,13 +6,19 @@ async function loadEvents(client) {
   const files = fs.readdirSync(eventsPath).filter(f => f.endsWith('.js'));
 
   for (const file of files) {
-    const event = require(path.join(eventsPath, file));
-    if (event.once) {
-      client.once(event.name, (...args) => event.execute(...args, client));
-    } else {
-      client.on(event.name, (...args) => event.execute(...args, client));
+    const mod = require(path.join(eventsPath, file));
+
+    // Support both single { name, execute } and array [{ name, execute }, ...]
+    const events = Array.isArray(mod) ? mod : [mod];
+
+    for (const event of events) {
+      if (event.once) {
+        client.once(event.name, (...args) => event.execute(...args, client));
+      } else {
+        client.on(event.name, (...args) => event.execute(...args, client));
+      }
+      console.log(`✅ Loaded event: ${event.name}`);
     }
-    console.log(`✅ Loaded event: ${event.name}`);
   }
 }
 

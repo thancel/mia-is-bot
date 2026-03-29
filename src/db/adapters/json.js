@@ -60,6 +60,9 @@ const CONFIG_DEFAULTS = {
   goodbyeEmbedColor:   null,
   voicePanelChannelId: null,
   logChannelId:        null,
+  autoRoleId:          null,
+  reactionRolePanels:  {},
+  giveaways:           {},
 };
 
 async function getGuildConfig(guildId) {

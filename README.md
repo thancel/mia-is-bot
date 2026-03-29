@@ -3,10 +3,13 @@
 A feature-rich Discord bot built with **Discord.js v14**.
 
 **Features:**
-- 🛡️ **Moderation** — Ban, Kick, Mute, Unmute, Warn, Purge, Unban
+- 🛡️ **Moderation** — Ban, Kick, Mute, Warn, Purge, Unban, Log Config
 - 🎙️ **Temp Voice** — Auto-create & delete private voice rooms with an interactive control panel
 - 🎌 **Anime / Manga** — Search info via AniList GraphQL with interactive selection menus
 - 👋 **Welcome & Goodbye** — Custom image cards with embed notifications
+- 🏷️ **Auto-Role** — Automatically assign roles to new members upon joining
+- 🎭 **Reaction Role** — Custom button-based role panels with complete management
+- 🎉 **Giveaway** — Manage giveaways with precise timers, instant rerolls, and rich embeds
 - ℹ️ **Info** — Server info, User info, Help
 
 ---
@@ -217,6 +220,32 @@ discord-bot/
 > **Background images** can be any size — they are automatically scaled to cover the 1280×720 canvas.
 > **Image fonts:** WELCOME/GOODBYE label uses **Bebas Neue**, username and sub-text use **Montserrat**.
 
+### 🏷️ Auto-Role
+| Command | Description |
+|---------|-------------|
+| `/autorole set <role>` | Set auto-role for new members |
+| `/autorole remove` | Remove the auto-role |
+| `/autorole status` | Show current auto-role configuration |
+
+### 🎭 Reaction Role
+| Command | Description |
+|---------|-------------|
+| `/reactionrole create <channel> <title>` | Create a new role panel |
+| `/reactionrole add <panel_id> <role> <label>` | Add a role button (up to 25) |
+| `/reactionrole remove <panel_id> <role>` | Remove a role button |
+| `/reactionrole edit <panel_id> ...` | Edit a panel's title, description, or color |
+| `/reactionrole delete <panel_id>` | Delete an entire panel |
+| `/reactionrole list` | List all panels |
+
+### 🎉 Giveaway
+| Command | Description |
+|---------|-------------|
+| `/giveaway start <prize> <duration> <channel>` | Start a new giveaway |
+| `/giveaway end <giveaway_id>` | End a giveaway early |
+| `/giveaway reroll <giveaway_id>` | Reroll the winner(s) of an ended giveaway |
+| `/giveaway delete <giveaway_id>` | Cancel and delete a giveaway |
+| `/giveaway list` | List all active and ended giveaways |
+
 ### ℹ️ Info
 | Command | Description |
 |---------|-------------|
@@ -238,7 +267,7 @@ discord-bot/
    - Grants owner permissions
    - Moves the user into the new channel
 4. When the channel is empty, it is automatically deleted.
-5. If the **owner leaves** while others remain, ownership transfers to the **earliest member** who joined. The new owner receives a DM notification.
+5. If the **owner leaves** while others remain, ownership transfers to the **earliest member** who joined. (There are no DM notifications to avoid spam).
 
 ---
 

@@ -38,6 +38,15 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
   try {
     console.log(`\n🚀 Mendaftarkan ${commands.length} slash commands...\n`);
 
+    const successAscii = `
+  ███████╗ ██╗   ██╗  ██████╗   ██████╗  ███████╗ ███████╗ ███████╗
+  ██╔════╝ ██║   ██║ ██╔════╝  ██╔════╝  ██╔════╝ ██╔════╝ ██╔════╝
+  ███████╗ ██║   ██║ ██║       ██║       █████╗   ███████╗ ███████╗
+  ╚════██║ ██║   ██║ ██║       ██║       ██╔══╝   ╚════██║ ╚════██║
+  ███████║ ╚██████╔╝ ╚██████╗  ╚██████╗  ███████╗ ███████║ ███████║
+  ╚══════╝  ╚═════╝   ╚═════╝   ╚═════╝  ╚══════╝ ╚══════╝ ╚══════╝
+    `;
+
     let data;
     if (process.env.GUILD_ID) {
       // Guild commands (instant, untuk development)
@@ -45,6 +54,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
         Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
         { body: commands }
       );
+      console.log(successAscii);
       console.log(`✅ Berhasil deploy ${data.length} guild commands ke server!`);
     } else {
       // Global commands (butuh ~1 jam untuk aktif)
@@ -52,6 +62,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
         Routes.applicationCommands(process.env.CLIENT_ID),
         { body: commands }
       );
+      console.log(successAscii);
       console.log(`✅ Berhasil deploy ${data.length} global commands!`);
     }
   } catch (err) {

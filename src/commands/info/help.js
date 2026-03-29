@@ -55,6 +55,35 @@ module.exports = {
           ].join('\n'),
         },
         {
+          name: '🏷️ Auto-Role',
+          value: [
+            '`/autorole set <role>` — Set auto-role for new members',
+            '`/autorole remove` — Remove the auto-role',
+            '`/autorole status` — Show current auto-role config',
+          ].join('\n'),
+        },
+        {
+          name: '🎭 Reaction Role',
+          value: [
+            '`/reactionrole create <channel> <title>` — Create a role panel',
+            '`/reactionrole add <panel_id> <role> <label>` — Add a role button',
+            '`/reactionrole remove <panel_id> <role>` — Remove a role button',
+            '`/reactionrole edit <panel_id> [title] [desc] [color]` — Edit a panel',
+            '`/reactionrole delete <panel_id>` — Delete a panel',
+            '`/reactionrole list` — List all panels',
+          ].join('\n'),
+        },
+        {
+          name: '🎉 Giveaway',
+          value: [
+            '`/giveaway start <prize> <duration> <channel>` — Start a giveaway',
+            '`/giveaway end <id>` — End early',
+            '`/giveaway reroll <id>` — Reroll winner(s)',
+            '`/giveaway delete <id>` — Cancel & delete',
+            '`/giveaway list` — List all giveaways',
+          ].join('\n'),
+        },
+        {
           name: 'ℹ️ Info',
           value: [
             '`/help` — Show this message',

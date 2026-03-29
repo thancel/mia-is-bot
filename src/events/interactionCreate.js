@@ -8,6 +8,7 @@ const {
   MessageFlags,
 } = require('discord.js');
 const { randomColor, fixedEmbed } = require('../utils/embedUtils');
+const db = require('../db');
 
 module.exports = {
   name: 'interactionCreate',
@@ -31,9 +32,113 @@ module.exports = {
       return;
     }
 
+    // ── Autocomplete ────────────────────────────────────────────────────────
+    if (interaction.isAutocomplete()) {
+      const command = client.commands.get(interaction.commandName);
+      if (!command?.autocomplete) return;
+      try {
+        await command.autocomplete(interaction);
+      } catch (err) {
+        console.error(`❌ Autocomplete error in /${interaction.commandName}:`, err);
+      }
+      return;
+    }
+
     // ── Button Interactions ─────────────────────────────────────────────────
     if (interaction.isButton()) {
       const { customId, member, guild } = interaction;
+
+      // ── Giveaway Entry Button ────────────────────────────────────────────
+      if (customId.startsWith('gw_enter_')) {
+        const giveawayId = customId.slice(9); // gw_enter_<id>
+        const cfg = await db.getGuildConfig(guild.id);
+        const giveaways = cfg.giveaways || {};
+        const gw = giveaways[giveawayId];
+
+        if (!gw || gw.ended) {
+          return interaction.reply({
+            embeds: fixedEmbed(0xed4245, '❌ This giveaway has ended.'),
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        const userId = member.id;
+        const idx = gw.entries.indexOf(userId);
+
+        if (idx === -1) {
+          // Enter
+          gw.entries.push(userId);
+          await db.setGuildConfig(guild.id, { giveaways });
+
+          // Update button count
+          try {
+            const { buildGiveawayButton, buildGiveawayEmbed } = require('../commands/moderation/giveaway');
+            const row = buildGiveawayButton(gw);
+            const embed = buildGiveawayEmbed(gw);
+            await interaction.update({ embeds: [embed], components: [row] });
+          } catch {
+            await interaction.deferUpdate();
+          }
+
+          return;
+        } else {
+          // Leave
+          gw.entries.splice(idx, 1);
+          await db.setGuildConfig(guild.id, { giveaways });
+
+          try {
+            const { buildGiveawayButton, buildGiveawayEmbed } = require('../commands/moderation/giveaway');
+            const row = buildGiveawayButton(gw);
+            const embed = buildGiveawayEmbed(gw);
+            await interaction.update({ embeds: [embed], components: [row] });
+          } catch {
+            await interaction.deferUpdate();
+          }
+
+          return;
+        }
+      }
+
+      // ── Reaction Role Buttons ──────────────────────────────────────────
+      if (customId.startsWith('rr_')) {
+        const roleId = customId.slice(3); // rr_<roleId>
+        const role = guild.roles.cache.get(roleId);
+
+        if (!role) {
+          return interaction.reply({
+            embeds: fixedEmbed(0xed4245, '❌ This role no longer exists. Please contact an admin.'),
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        try {
+          if (member.roles.cache.has(roleId)) {
+            await member.roles.remove(role, 'Reaction role toggle');
+            return interaction.reply({
+              embeds: [new EmbedBuilder()
+                .setColor(0xed4245)
+                .setDescription(`❌ Removed role ${role} from you.`)],
+              flags: MessageFlags.Ephemeral,
+            });
+          } else {
+            await member.roles.add(role, 'Reaction role toggle');
+            return interaction.reply({
+              embeds: [new EmbedBuilder()
+                .setColor(0x57f287)
+                .setDescription(`✅ You now have the ${role} role!`)],
+              flags: MessageFlags.Ephemeral,
+            });
+          }
+        } catch (err) {
+          console.error('❌ Reaction role error:', err.message);
+          return interaction.reply({
+            embeds: fixedEmbed(0xed4245, '❌ Failed to update your role. The bot may lack permissions.'),
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+      }
+
+      // ── Temp Voice Buttons ─────────────────────────────────────────────
       const tvButtons = ['tv_lock', 'tv_unlock', 'tv_rename', 'tv_limit', 'tv_bitrate', 'tv_info'];
       if (!tvButtons.includes(customId)) return;
 

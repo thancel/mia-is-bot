@@ -7,6 +7,21 @@ module.exports = {
   name: 'guildMemberAdd',
   async execute(member) {
     const cfg = await db.getGuildConfig(member.guild.id);
+
+    // ── Auto-Role ────────────────────────────────────────────────────────────
+    if (cfg.autoRoleId) {
+      try {
+        const role = member.guild.roles.cache.get(cfg.autoRoleId);
+        if (role && !role.managed && member.guild.members.me.roles.highest.position > role.position) {
+          await member.roles.add(role, 'Auto-role on join');
+          console.log(`🏷️  Auto-role: Assigned "${role.name}" to ${member.user.tag}`);
+        }
+      } catch (err) {
+        console.error(`❌ Auto-role failed for ${member.user.tag}:`, err.message);
+      }
+    }
+
+    // ── Welcome Message ──────────────────────────────────────────────────────
     if (!cfg.welcomeChannelId) return;
     const channel = member.guild.channels.cache.get(cfg.welcomeChannelId);
     if (!channel) return;

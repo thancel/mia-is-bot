@@ -51,11 +51,12 @@ module.exports = {
                 PermissionFlagsBits.MuteMembers,
                 PermissionFlagsBits.Connect,
                 PermissionFlagsBits.Speak,
+                PermissionFlagsBits.Stream,
               ],
             },
             {
               id: guild.id,
-              allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak],
+              allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.Stream],
             },
           ],
           userLimit: 0,
@@ -80,6 +81,17 @@ module.exports = {
       } catch (err) {
         console.error('❌ Failed to create temp voice:', err);
       }
+
+      // Also clean up the channel the user just left (if it's a temp voice and now empty)
+      if (oldState.channel && client.tempVoiceChannels.has(oldState.channel.id)) {
+        const leftChannel = oldState.channel;
+        if (leftChannel.members.size === 0) {
+          await db.deleteTempVoice(leftChannel.id);
+          client.tempVoiceChannels.delete(leftChannel.id);
+          await leftChannel.delete('Temp voice empty').catch(() => {});
+        }
+      }
+
       return;
     }
 
@@ -93,23 +105,22 @@ module.exports = {
 
       // Channel empty → delete
       if (leftChannel.members.size === 0) {
-        try {
-          await leftChannel.delete('Temp voice empty');
-          await db.deleteTempVoice(leftChannel.id);
-          client.tempVoiceChannels.delete(leftChannel.id);
+        // Always clean up DB + memory first
+        await db.deleteTempVoice(leftChannel.id);
+        client.tempVoiceChannels.delete(leftChannel.id);
 
-          await sendLog(guild, new EmbedBuilder()
-            .setColor(0x99aab5)
-            .setTitle('🗑️ Temp Voice Deleted')
-            .addFields(
-              { name: '🔊 Channel', value: leftChannel.name, inline: false },
-              { name: '📝 Reason',  value: 'Channel was empty',  inline: false },
-            )
-            .setTimestamp()
-          );
-        } catch (err) {
-          console.error('❌ Failed to delete empty channel:', err);
-        }
+        // Try to delete the Discord channel (may already be gone)
+        await leftChannel.delete('Temp voice empty').catch(() => {});
+
+        await sendLog(guild, new EmbedBuilder()
+          .setColor(0x99aab5)
+          .setTitle('🗑️ Temp Voice Deleted')
+          .addFields(
+            { name: '🔊 Channel', value: leftChannel.name, inline: false },
+            { name: '📝 Reason',  value: 'Channel was empty',  inline: false },
+          )
+          .setTimestamp()
+        ).catch(() => {});
         return;
       }
 
@@ -133,13 +144,7 @@ module.exports = {
             await db.updateTempVoiceOwner(leftChannel.id, nextOwnerId);
             client.tempVoiceChannels.set(leftChannel.id, String(nextOwnerId));
 
-            // Notify new owner via DM
             const newOwnerMember = leftChannel.members.get(nextOwnerId);
-            if (newOwnerMember) {
-              newOwnerMember.user.send(
-                `👑 You are now the owner of **${leftChannel.name}** in **${guild.name}**!`
-              ).catch(() => {});
-            }
 
             await sendLog(guild, new EmbedBuilder()
               .setColor(0xffa500)

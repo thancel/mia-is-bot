@@ -150,6 +150,25 @@ module.exports = {
           flags: MessageFlags.Ephemeral,
         });
       }
+      // Check if temp voice is already set up in this server
+      const existingCfg = await db.getGuildConfig(guild.id);
+      if (existingCfg.voicePanelChannelId) {
+        const existingPanel = guild.channels.cache.get(existingCfg.voicePanelChannelId);
+        if (existingPanel) {
+          return interaction.reply({
+            embeds: [new EmbedBuilder()
+              .setColor(0xed4245)
+              .setDescription(
+                `❌ Temp Voice is already set up in this server!\n\n` +
+                `📺 Panel channel: ${existingPanel}\n\n` +
+                `To re-setup, delete the existing **➕ Create Voice** and **🎙️・voice-panel** channels first, then run this command again.`
+              )],
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+        // Panel channel no longer exists — clear stale config and allow re-setup
+        await db.setGuildConfig(guild.id, { voicePanelChannelId: null });
+      }
 
       const category = interaction.options.getChannel('category');
       try {
