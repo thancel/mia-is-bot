@@ -157,24 +157,20 @@ module.exports = {
           embeds: fixedEmbed(0xED4245, '❌ **Admin Only:** You do not have the required permissions.'),
         });
       }
-      // Check if temp voice is already set up in this server
-      const existingCfg = await db.getGuildConfig(guild.id);
-      if (existingCfg.voicePanelChannelId) {
-        const existingPanel = guild.channels.cache.get(existingCfg.voicePanelChannelId);
-        if (existingPanel) {
-          return interaction.editReply({
-            embeds: [new EmbedBuilder()
-              .setColor(0xed4245)
-              .setDescription(
-                `❌ Temp Voice is already set up in this server!\n\n` +
-                `📺 Panel channel: ${existingPanel}\n\n` +
-                `To re-setup, delete the existing **➕ Create Voice** and **🎙️・interface** channels first, then run this command again.`
-              )],
-          });
+      // Cleanup: Search and delete any existing channels with the same purpose names to avoid duplicates
+      const channelsToDelete = guild.channels.cache.filter(c => 
+        c.name === '➕ Create Voice' || c.name === '🎙️・interface'
+      );
+      
+      for (const [, ch] of channelsToDelete) {
+        try {
+          await ch.delete('Cleanup before new temp voice setup');
+        } catch (err) {
+          console.warn(`[Voice Setup] Failed to delete old channel ${ch.name}:`, err.message);
         }
-        // Panel channel no longer exists — clear stale config and allow re-setup
-        await db.setGuildConfig(guild.id, { voicePanelChannelId: null });
       }
+
+      await db.setGuildConfig(guild.id, { voicePanelChannelId: null });
 
       const category = interaction.options.getChannel('category');
       try {
