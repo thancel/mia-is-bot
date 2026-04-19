@@ -1,5 +1,37 @@
-data/
+# Dependencies
 node_modules/
+
+# Database & Local Data
+data/
+
+# Environment Variables & Secrets
 .env
+.env.*
+!.env.example
+
+# Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS Files
 .DS_Store
+Thumbs.db
+
+# IDEs & Text Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Backups
+*.bak
+*.tmp
+
+# Coverage reports
+coverage/
+.nyc_output/

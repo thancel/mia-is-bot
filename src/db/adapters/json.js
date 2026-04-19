@@ -160,11 +160,16 @@ async function updateTempVoiceJoinOrder(channelId, joinOrder) {
   }
 }
 
+function getAllGuildConfigs() {
+  return db().guildConfigs || {};
+}
+
 module.exports = {
   connect,
   getGuildConfig,
   setGuildConfig,
   resetGuildConfig,
+  getAllGuildConfigs,
   addWarning,
   getWarnings,
   removeWarning,

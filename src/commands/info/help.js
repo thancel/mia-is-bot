@@ -15,16 +15,18 @@ module.exports = {
         {
           name: '🎙️ Temp Voice',
           value: [
-            '`/tempvoice setup <category>` — [Admin] Create trigger channel + control panel',
-            '`/tempvoice kick <user>` — Kick a user from your temporary channel',
-            '`/tempvoice panel` — [Admin] Refresh and resend the control panel',
+            '`/voice setup <category>` — [Admin] Create trigger channel + interface panel',
+            '`/voice kick <user>` — Kick a user from your temporary channel',
+            '`/voice panel` — [Admin] Refresh and resend the interface panel',
             '',
-            '**Panel Buttons** *(in #voice-panel)*',
-            '🔒 **Lock / Unlock** — Toggle channel access',
-            '✏️ **Rename** — Change channel name',
-            '👥 **Limit** — Set max user count',
-            '📡 **Bitrate** — Adjust audio quality',
-            'ℹ️ **Info** — View channel info (only you can see)',
+            '**Panel Buttons** *(in #🎙️・interface)*',
+            '✏️ **Name** — Rename channel  •  🔒 **Limit** — Set user limit',
+            '🛡️ **Privacy** — Lock/Unlock  •  ⏳ **Waiting R.** — Waiting room',
+            '👤 **Trust/Untrust** — Manage access',
+            '📩 **Invite** — Invite user  •  🦶 **Kick** — Kick user',
+            '🚫 **Block/Unblock** — Block user',
+            '👑 **Claim** — Claim ownership  •  🔄 **Transfer** — Transfer owner',
+            '🗑️ **Delete** — Delete your channel',
           ].join('\n'),
         },
         {
@@ -32,6 +34,8 @@ module.exports = {
           value: [
             '`/anime <title>` — Search anime via AniList',
             '`/manga <title>` — Search manga via AniList',
+            '`/notify anime setup` — Track AniList user and notify when episodes air',
+            '`/notify anime remove` — Disable anime notifications',
           ].join('\n'),
         },
         {
@@ -76,7 +80,7 @@ module.exports = {
         {
           name: '🎉 Giveaway',
           value: [
-            '`/giveaway start <prize> <duration> <channel>` — Start a giveaway',
+            '`/giveaway start <prize> <duration> <channel> [ping] [role]` — Start a giveaway',
             '`/giveaway end <id>` — End early',
             '`/giveaway reroll <id>` — Reroll winner(s)',
             '`/giveaway delete <id>` — Cancel & delete',

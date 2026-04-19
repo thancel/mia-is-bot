@@ -88,6 +88,19 @@ async function resetGuildConfig(guildId) {
   if (error) throw new Error(`resetGuildConfig error: ${error.message}`);
 }
 
+async function getAllGuildConfigs() {
+  const { data, error } = await supabase.from('guild_configs').select('guild_id, data');
+  if (error) {
+    console.error('Supabase fetch error (getAllConfigs):', error);
+    return {};
+  }
+  const result = {};
+  for (const row of data) {
+    result[row.guild_id] = row.data;
+  }
+  return result;
+}
+
 // ── Warnings ───────────────────────────────────────────────────────────────
 async function addWarning(guildId, userId, { reason, modId, modTag }) {
   const { error } = await supabase
@@ -208,6 +221,7 @@ module.exports = {
   getGuildConfig,
   setGuildConfig,
   resetGuildConfig,
+  getAllGuildConfigs,
   // warnings
   addWarning,
   getWarnings,

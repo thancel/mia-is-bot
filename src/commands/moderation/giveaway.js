@@ -245,6 +245,16 @@ module.exports = {
         .setName('message')
         .setDescription('Custom message for the giveaway (supports {nl} for new line)')
         .setMaxLength(1024))
+      .addStringOption(opt => opt
+        .setName('ping')
+        .setDescription('Notify everyone or here')
+        .addChoices(
+          { name: '@everyone', value: 'everyone' },
+          { name: '@here',     value: 'here' },
+        ))
+      .addRoleOption(opt => opt
+        .setName('role')
+        .setDescription('Role to ping'))
     )
 
     // /giveaway end
@@ -299,6 +309,15 @@ module.exports = {
       const winnerCount = interaction.options.getInteger('winners') || 1;
       const rawMessage  = interaction.options.getString('message') || null;
       const message     = rawMessage ? rawMessage.replace(/\{nl\}/gi, '\n') : null;
+      const ping        = interaction.options.getString('ping');
+      const role        = interaction.options.getRole('role');
+
+      let mentions = [];
+      if (ping === 'everyone') mentions.push('@everyone');
+      else if (ping === 'here') mentions.push('@here');
+      if (role) mentions.push(`<@&${role.id}>`);
+
+      const content = mentions.length > 0 ? mentions.join(' ') : null;
 
       const durationMs = parseDuration(durationStr);
       if (durationMs < 10000) { // min 10 seconds
@@ -338,7 +357,11 @@ module.exports = {
       const embed = buildGiveawayEmbed(gw);
       const row = buildGiveawayButton(gw);
 
-      const sent = await channel.send({ embeds: [embed], components: [row] });
+      const sent = await channel.send({
+        content,
+        embeds: [embed],
+        components: [row]
+      });
       gw.messageId = sent.id;
 
       giveaways[giveawayId] = gw;

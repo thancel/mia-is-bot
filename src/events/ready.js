@@ -1,6 +1,7 @@
 const { ActivityType } = require('discord.js');
 const db = require('../db');
 const { refreshPanel } = require('../commands/voice/tempvoice');
+const { startScheduler } = require('../utils/anilistScheduler');
 
 module.exports = {
   name: 'clientReady',
@@ -87,5 +88,8 @@ module.exports = {
       }
     }
     if (gwRestored > 0) console.log(`🎉 Restored ${gwRestored} active giveaway timer(s)`);
+
+    // Start AniList checking scheduler
+    startScheduler(client);
   },
 };

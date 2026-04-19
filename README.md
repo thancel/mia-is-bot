@@ -137,7 +137,7 @@ discord-bot/
     │   │   ├── Welcome.js        # /welcome setup/background/text/color/preview/reset
     │   │   └── Goodbye.js        # /goodbye setup/background/text/color/preview/reset
     │   ├── voice/
-    │   │   └── tempvoice.js      # /tempvoice setup/kick/panel
+    │   │   └── tempvoice.js      # /voice setup/kick/panel
     │   └── info/
     │       ├── help.js           # /help
     │       ├── info.js           # /serverinfo /userinfo
@@ -170,19 +170,24 @@ discord-bot/
 ### 🎙️ Temp Voice
 | Command | Description |
 |---------|-------------|
-| `/tempvoice setup <category>` | [Admin] Create trigger channel + control panel |
-| `/tempvoice kick <user>` | Kick a user from your temp channel |
-| `/tempvoice panel` | [Admin] Refresh and resend the control panel |
+| `/voice setup <category>` | [Admin] Create trigger channel + control panel |
+| `/voice kick <user>` | Kick a user from your temp channel |
+| `/voice panel` | [Admin] Refresh and resend the control panel |
 
-**Panel Buttons** *(in `#voice-panel`)*
+**Panel Buttons** *(in `#🎙️・interface`)*
 | Button | Action |
 |--------|--------|
-| 🔒 **Lock** | Prevent new users from joining |
-| 🔓 **Unlock** | Allow everyone to join |
-| ✏️ **Rename** | Rename the channel (opens a form) |
-| 👥 **Limit** | Set max user count (opens a form) |
-| 📡 **Bitrate** | Adjust audio quality (opens a form) |
-| ℹ️ **Info** | Show channel info (only visible to you) |
+| `✏️` **Rename** | Rename the channel (opens a form) |
+| `🔒` **Limit** | Set user limit (opens a form) |
+| `🛡️` **Privacy** | Lock/Unlock (toggle) |
+| `⏳` **Waiting R.** | Toggle Waiting Room |
+| `👤` **Trust/Untrust** | Manage user access (toggle) |
+| `🚫` **Block/Unblock** | Block user from joining (toggle) |
+| `📩` **Invite** | Invite a user via DM with bypass |
+| `🦶` **Kick** | Kick a user from channel |
+| `👑` **Claim** | Claim ownership of empty-owned channel |
+| `🔄` **Transfer** | Transfer ownership to someone else |
+| `🗑️` **Delete** | Delete your temporary channel |
 
 > ℹ️ **On bot restart**, the panel is automatically refreshed — old messages are deleted and a fresh panel is sent.
 
@@ -191,6 +196,8 @@ discord-bot/
 |---------|-------------|
 | `/anime <title>` | Search anime via AniList. Shows selection if multiple results. |
 | `/manga <title>` | Search manga via AniList. Shows selection if multiple results. |
+| `/notify anime setup <channel> [username] [role]`| Track AniList user's watching/planning list and notify when episodes air. |
+| `/notify anime remove` | Disable anime notifications for this server. |
 
 ### 🛡️ Moderation
 | Command | Description |
@@ -240,7 +247,7 @@ discord-bot/
 ### 🎉 Giveaway
 | Command | Description |
 |---------|-------------|
-| `/giveaway start <prize> <duration> <channel>` | Start a new giveaway |
+| `/giveaway start <prize> <duration> <channel> [ping] [role]` | Start a new giveaway |
 | `/giveaway end <giveaway_id>` | End a giveaway early |
 | `/giveaway reroll <giveaway_id>` | Reroll the winner(s) of an ended giveaway |
 | `/giveaway delete <giveaway_id>` | Cancel and delete a giveaway |
@@ -258,10 +265,10 @@ discord-bot/
 
 ## ⚙️ Temp Voice Setup
 
-1. Run `/tempvoice setup category:<choose a category>`
+1. Run `/voice setup category:<choose a category>`
 2. The bot creates two channels:
    - 🔊 **➕ Create Voice** — Join to create a private room.
-   - 💬 **🎙️・voice-panel** — Text channel with the permanent control panel.
+   - 💬 **🎙️・interface** — Text channel with the permanent control panel.
 3. When a user joins **➕ Create Voice**, the bot:
    - Creates a new voice channel named after the user
    - Grants owner permissions

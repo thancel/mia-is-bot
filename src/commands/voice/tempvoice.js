@@ -7,7 +7,9 @@ const {
   ButtonBuilder,
   ButtonStyle,
   MessageFlags,
+  AttachmentBuilder,
 } = require('discord.js');
+const path = require('path');
 const db = require('../../db');
 const { randomColor, fixedEmbed } = require('../../utils/embedUtils');
 
@@ -18,34 +20,37 @@ async function sendLog(guild, embed) {
   if (ch) ch.send({ embeds: [embed] }).catch(() => {});
 }
 
-function buildControlPanel(maxBitrate = 96) {
+function buildControlPanel() {
   const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('tv_lock').setLabel('Lock').setEmoji('🔒').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId('tv_unlock').setLabel('Unlock').setEmoji('🔓').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId('tv_rename').setLabel('Rename').setEmoji('✏️').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('tv_limit').setLabel('Limit').setEmoji('👥').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('tv_bitrate').setLabel('Bitrate').setEmoji('📡').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('tv_rename').setEmoji('✏️').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('tv_limit').setEmoji('🔒').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('tv_privacy').setEmoji('🛡️').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('tv_waitingroom').setEmoji('⏳').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('tv_trust').setEmoji('👤').setStyle(ButtonStyle.Secondary),
   );
   const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('tv_info').setLabel('Info').setEmoji('ℹ️').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('tv_block').setEmoji('🚫').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('tv_invite').setEmoji('📩').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('tv_kick').setEmoji('🦶').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('tv_claim').setEmoji('👑').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('tv_transfer').setEmoji('🔄').setStyle(ButtonStyle.Secondary),
   );
-  return [row1, row2];
+  const row3 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('tv_delete').setEmoji('🗑️').setStyle(ButtonStyle.Danger),
+  );
+  return [row1, row2, row3];
 }
 
-function buildPanelEmbed(client, maxBitrate = 96) {
+function buildPanelEmbed(client) {
   return new EmbedBuilder()
     .setColor(0x5865F2)
-    .setAuthor({ name: 'Voice Control Panel', iconURL: client.user.displayAvatarURL() })
+    .setTitle('Voice Interface')
     .setDescription(
-      'Manage your temporary voice channel using the buttons below.\n\n' +
-      '🔒 **Lock / Unlock** • *Control access to your room*\n' +
-      '✏️ **Rename** • *Change your room name*\n' +
-      '👥 **Limit** • *Set max user count (0–99)*\n' +
-      `📡 **Bitrate** • *Set audio quality (8–${maxBitrate}kbps)*\n` +
-      'ℹ️ **Info** • *View channel details (only visible to you)*\n\n' +
-      '🦵 **Kick a user:** `/tempvoice kick <user>`'
+      'This **interface** can be used to manage temporary voice channels.\n' +
+      'More options are available with **/voice** commands.'
     )
-    .setFooter({ text: 'Only the channel owner can use these controls.' });
+    .setImage('attachment://voice-panel.png')
+    .setFooter({ text: 'Press the buttons below to use the interface' });
 }
 
 /**
@@ -97,16 +102,18 @@ async function refreshPanel(panelChannel, client) {
     }
   } catch (_) {}
 
-  const maxBitrate = [96, 128, 256, 384][panelChannel.guild.premiumTier] || 96;
+  const attachment = new AttachmentBuilder(path.join(__dirname, '../../assets/voice-panel.png'), { name: 'voice-panel.png' });
+
   await panelChannel.send({
-    embeds: [buildPanelEmbed(client, maxBitrate)],
-    components: buildControlPanel(maxBitrate),
+    embeds: [buildPanelEmbed(client)],
+    components: buildControlPanel(),
+    files: [attachment],
   });
 }
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('tempvoice')
+    .setName('voice')
     .setDescription('🎙️ Temp Voice Channel management')
     .addSubcommand(sub => sub
       .setName('setup')
@@ -140,14 +147,14 @@ module.exports = {
     const sub        = interaction.options.getSubcommand();
     const member     = interaction.member;
     const guild      = interaction.guild;
-    const maxBitrate = [96, 128, 256, 384][guild.premiumTier] || 96;
 
     // ── SETUP ──────────────────────────────────────────────────────────────
     if (sub === 'setup') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
       if (!member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({
+        return interaction.editReply({
           embeds: fixedEmbed(0xED4245, '❌ **Admin Only:** You do not have the required permissions.'),
-          flags: MessageFlags.Ephemeral,
         });
       }
       // Check if temp voice is already set up in this server
@@ -155,15 +162,14 @@ module.exports = {
       if (existingCfg.voicePanelChannelId) {
         const existingPanel = guild.channels.cache.get(existingCfg.voicePanelChannelId);
         if (existingPanel) {
-          return interaction.reply({
+          return interaction.editReply({
             embeds: [new EmbedBuilder()
               .setColor(0xed4245)
               .setDescription(
                 `❌ Temp Voice is already set up in this server!\n\n` +
                 `📺 Panel channel: ${existingPanel}\n\n` +
-                `To re-setup, delete the existing **➕ Create Voice** and **🎙️・voice-panel** channels first, then run this command again.`
+                `To re-setup, delete the existing **➕ Create Voice** and **🎙️・interface** channels first, then run this command again.`
               )],
-            flags: MessageFlags.Ephemeral,
           });
         }
         // Panel channel no longer exists — clear stale config and allow re-setup
@@ -179,7 +185,7 @@ module.exports = {
         });
 
         const panelCh = await guild.channels.create({
-          name: '🎙️・voice-panel',
+          name: '🎙️・interface',
           type: ChannelType.GuildText,
           parent: category.id,
           permissionOverwrites: panelPermissions(guild.id),
@@ -188,9 +194,12 @@ module.exports = {
         // Save panel channel in guild config for restart recovery
         await db.setGuildConfig(guild.id, { voicePanelChannelId: panelCh.id });
 
+        const attachment = new AttachmentBuilder(path.join(__dirname, '../../assets/voice-panel.png'), { name: 'voice-panel.png' });
+
         await panelCh.send({
-          embeds: [buildPanelEmbed(client, maxBitrate)],
-          components: buildControlPanel(maxBitrate),
+          embeds: [buildPanelEmbed(client)],
+          components: buildControlPanel(),
+          files: [attachment],
         });
 
         await sendLog(guild, new EmbedBuilder()
@@ -205,21 +214,19 @@ module.exports = {
           .setTimestamp()
         );
 
-        return interaction.reply({
+        return interaction.editReply({
           embeds: [new EmbedBuilder()
-            .setColor(randomColor())
+            .setColor(0x57F287)
             .setTitle('✅ Setup Complete!')
             .addFields(
               { name: '🔊 Trigger Channel', value: `${triggerCh}`, inline: true },
               { name: '💬 Panel Channel',   value: `${panelCh}`,   inline: true },
             )
             .setFooter({ text: 'Users join the trigger channel to create their own room.' })],
-          flags: MessageFlags.Ephemeral,
         });
       } catch (err) {
-        return interaction.reply({
+        return interaction.editReply({
           embeds: fixedEmbed(0xED4245, `❌ Setup failed: ${err.message}`),
-          flags: MessageFlags.Ephemeral,
         });
       }
     }
@@ -271,10 +278,11 @@ module.exports = {
 
     // ── PANEL ──────────────────────────────────────────────────────────────
     if (sub === 'panel') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
       if (!member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({
+        return interaction.editReply({
           embeds: fixedEmbed(0xED4245, '❌ **Admin Only.**'),
-          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -291,8 +299,7 @@ module.exports = {
         .setTimestamp()
       );
 
-      await interaction.reply({ content: '✅', flags: MessageFlags.Ephemeral });
-      await interaction.deleteReply().catch(() => {});
+      await interaction.editReply({ content: '✅ Panel successfully refreshed!' });
     }
   },
 };

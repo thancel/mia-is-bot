@@ -39,7 +39,7 @@ module.exports = {
       // Create new room
       try {
         const newChannel = await guild.channels.create({
-          name: `🎙️ ${member.displayName}'s Room`,
+          name: `${member.displayName}'s Room`,
           type: ChannelType.GuildVoice,
           parent: newState.channel.parentId,
           permissionOverwrites: [
@@ -88,6 +88,7 @@ module.exports = {
         if (leftChannel.members.size === 0) {
           await db.deleteTempVoice(leftChannel.id);
           client.tempVoiceChannels.delete(leftChannel.id);
+
           await leftChannel.delete('Temp voice empty').catch(() => {});
         }
       }
