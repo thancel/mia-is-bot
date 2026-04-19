@@ -171,7 +171,6 @@ discord-bot/
 | Command | Description |
 |---------|-------------|
 | `/voice setup <category>` | [Admin] Create trigger channel + control panel |
-| `/voice kick <user>` | Kick a user from your temp channel |
 | `/voice panel` | [Admin] Refresh and resend the control panel |
 
 **Panel Buttons** *(in `#🎙️・interface`)*
@@ -247,19 +246,26 @@ discord-bot/
 ### 🎉 Giveaway
 | Command | Description |
 |---------|-------------|
-| `/giveaway start <prize> <duration> <channel> [ping] [role]` | Start a new giveaway |
+| `/giveaway start <prize> <duration> [ping] [role]` | Start a new giveaway |
 | `/giveaway end <giveaway_id>` | End a giveaway early |
 | `/giveaway reroll <giveaway_id>` | Reroll the winner(s) of an ended giveaway |
 | `/giveaway delete <giveaway_id>` | Cancel and delete a giveaway |
 | `/giveaway list` | List all active and ended giveaways |
 
+### 🎮 Games
+| Command | Description |
+|---------|-------------|
+| `/trivia [category]` | Start a Trivia quiz (Race Mode). Categories: Anime, Games, Animals, Geography, Tech, Mythology, Music, History. |
+| `/unscramble [cat]` | Start a Word Unscramble game (Chat Race). Categories: Anime Characters, Anime Titles, Video Games. *Supports reversed names for characters.* |
+| `/leaderboard` | Show the top 10 players with the highest game scores. |
+
 ### ℹ️ Info
 | Command | Description |
 |---------|-------------|
-| `/help` | Show all commands |
-| `/serverinfo` | Display server details |
-| `/userinfo [user]` | Display user details |
-| `/say <message> [channel]` | Send a message as the bot |
+| `/help` | Show listing of all available commands. |
+| `/serverinfo` | Display current server information. |
+| `/userinfo [user]` | Display user information. |
+| `/say <message> [channel]` | Send a message as the bot. |
 
 ---
 

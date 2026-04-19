@@ -36,7 +36,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 (async () => {
   try {
-    console.log(`\n🚀 Mendaftarkan ${commands.length} slash commands...\n`);
+    console.log(`\n🚀 Registering ${commands.length} slash commands...\n`);
 
     const successAscii = `
   ███████╗ ██╗   ██╗  ██████╗   ██████╗  ███████╗ ███████╗ ███████╗
@@ -55,7 +55,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
         { body: commands }
       );
       console.log(successAscii);
-      console.log(`✅ Berhasil deploy ${data.length} guild commands ke server!`);
+      console.log(`✅ Successfully deployed ${data.length} guild commands!`);
     } else {
       // Global commands (butuh ~1 jam untuk aktif)
       data = await rest.put(
@@ -63,9 +63,9 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
         { body: commands }
       );
       console.log(successAscii);
-      console.log(`✅ Berhasil deploy ${data.length} global commands!`);
+      console.log(`✅ Successfully deployed ${data.length} global commands!`);
     }
   } catch (err) {
-    console.error('❌ Gagal deploy commands:', err);
+    console.error('❌ Failed to deploy commands:', err);
   }
 })();

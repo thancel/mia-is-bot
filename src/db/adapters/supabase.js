@@ -58,6 +58,7 @@ const CONFIG_DEFAULTS = {
   autoRoleId:          null,
   reactionRolePanels:  {},
   giveaways:           {},
+  triviaScores:        {},
 };
 
 async function getGuildConfig(guildId) {
@@ -215,6 +216,22 @@ async function updateTempVoiceJoinOrder(channelId, joinOrder) {
   if (error) throw new Error(`updateTempVoiceJoinOrder error: ${error.message}`);
 }
 
+async function addUserTriviaScore(guildId, userId, points) {
+  const cfg = await getGuildConfig(guildId);
+  cfg.triviaScores ??= {};
+  cfg.triviaScores[userId] = (cfg.triviaScores[userId] || 0) + points;
+  await setGuildConfig(guildId, { triviaScores: cfg.triviaScores });
+}
+
+async function getTriviaLeaderboard(guildId) {
+  const cfg = await getGuildConfig(guildId);
+  const scores = cfg.triviaScores || {};
+  return Object.entries(scores)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 10)
+    .map(([userId, score]) => ({ userId, score }));
+}
+
 module.exports = {
   connect,
   // guild config
@@ -234,4 +251,6 @@ module.exports = {
   getAllTempVoices,
   updateTempVoiceOwner,
   updateTempVoiceJoinOrder,
+  addUserTriviaScore,
+  getTriviaLeaderboard,
 };

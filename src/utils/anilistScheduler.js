@@ -105,8 +105,8 @@ async function runCheck(client) {
       const titleDisplay = media.title.english || media.title.romaji || "Unknown Anime";
       
       const airingDate = new Date(ep.airingAt * 1000);
-      const timeStr = airingDate.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' }).replace('.', ':');
-      const dateStr = airingDate.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: '2-digit', year: '2-digit' });
+      const timeStr = airingDate.toLocaleTimeString('en-US', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
+      const dateStr = airingDate.toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta', day: '2-digit', month: '2-digit', year: 'numeric' });
       
       const embed = new EmbedBuilder()
         .setColor(media.coverImage?.color ? parseInt(media.coverImage.color.replace('#', ''), 16) : 0x5865F2)

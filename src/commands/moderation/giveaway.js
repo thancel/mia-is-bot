@@ -231,11 +231,6 @@ module.exports = {
         .setName('duration')
         .setDescription('Duration (e.g. 1h, 30m, 1d12h, 2d)')
         .setRequired(true))
-      .addChannelOption(opt => opt
-        .setName('channel')
-        .setDescription('Channel to host the giveaway in')
-        .addChannelTypes(ChannelType.GuildText)
-        .setRequired(true))
       .addIntegerOption(opt => opt
         .setName('winners')
         .setDescription('Number of winners (default: 1)')
@@ -305,7 +300,7 @@ module.exports = {
     if (sub === 'start') {
       const prize       = interaction.options.getString('prize');
       const durationStr = interaction.options.getString('duration');
-      const channel     = interaction.options.getChannel('channel');
+      const channel     = interaction.channel;
       const winnerCount = interaction.options.getInteger('winners') || 1;
       const rawMessage  = interaction.options.getString('message') || null;
       const message     = rawMessage ? rawMessage.replace(/\{nl\}/gi, '\n') : null;

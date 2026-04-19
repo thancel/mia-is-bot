@@ -47,16 +47,12 @@ function buildPanelEmbed(client) {
     .setTitle('Voice Interface')
     .setDescription(
       'This **interface** can be used to manage temporary voice channels.\n' +
-      'More options are available with **/voice** commands.'
+      'All controls are accessible via the buttons below.'
     )
     .setImage('attachment://voice-panel.png')
     .setFooter({ text: 'Press the buttons below to use the interface' });
 }
 
-/**
- * The full set of permissions the panel channel should enforce.
- * Members can only view + read history + click buttons.
- */
 function panelPermissions(guildId) {
   return [
     {
@@ -80,14 +76,7 @@ function panelPermissions(guildId) {
   ];
 }
 
-/**
- * Refresh the panel in a channel:
- * - Re-enforce permissions (in case they drifted)
- * - Delete all old bot panel messages
- * - Send a fresh panel
- */
 async function refreshPanel(panelChannel, client) {
-  // Re-apply strict permissions every time
   try {
     await panelChannel.permissionOverwrites.set(panelPermissions(panelChannel.guild.id));
   } catch (_) {}
@@ -126,15 +115,6 @@ module.exports = {
       )
     )
     .addSubcommand(sub => sub
-      .setName('kick')
-      .setDescription('🦵 Kick a user from your temporary channel')
-      .addUserOption(opt => opt
-        .setName('user')
-        .setDescription('The user to kick')
-        .setRequired(true)
-      )
-    )
-    .addSubcommand(sub => sub
       .setName('panel')
       .setDescription('🎛️ [Admin] Refresh and resend the control panel to this channel')
     ),
@@ -148,7 +128,6 @@ module.exports = {
     const member     = interaction.member;
     const guild      = interaction.guild;
 
-    // ── SETUP ──────────────────────────────────────────────────────────────
     if (sub === 'setup') {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -157,7 +136,27 @@ module.exports = {
           embeds: fixedEmbed(0xED4245, '❌ **Admin Only:** You do not have the required permissions.'),
         });
       }
-      // Cleanup: Search and delete any existing channels with the same purpose names to avoid duplicates
+
+      // Check for existing setup - block if both channels exist
+      const foundVoice = guild.channels.cache.find(c => c.name === '➕ Create Voice' && c.type === ChannelType.GuildVoice);
+      const foundPanel = guild.channels.cache.find(c => c.name === '🎙️・interface' && c.type === ChannelType.GuildText);
+
+      if (foundVoice && foundPanel) {
+        return interaction.editReply({
+          embeds: [new EmbedBuilder()
+            .setColor(0xED4245)
+            .setTitle('❌ Setup Already Active')
+            .setDescription(
+              `Temp Voice is already fully set up.\n\n` +
+              `🔊 **Trigger:** ${foundVoice}\n` +
+              `💬 **Panel:** ${foundPanel}\n\n` +
+              `If you want to re-setup, delete one of these channels first.`
+            )
+          ],
+        });
+      }
+
+      // Cleanup: Search and delete if incomplete (only one exists or name matches)
       const channelsToDelete = guild.channels.cache.filter(c => 
         c.name === '➕ Create Voice' || c.name === '🎙️・interface'
       );
@@ -187,7 +186,6 @@ module.exports = {
           permissionOverwrites: panelPermissions(guild.id),
         });
 
-        // Save panel channel in guild config for restart recovery
         await db.setGuildConfig(guild.id, { voicePanelChannelId: panelCh.id });
 
         const attachment = new AttachmentBuilder(path.join(__dirname, '../../assets/voice-panel.png'), { name: 'voice-panel.png' });
@@ -227,52 +225,6 @@ module.exports = {
       }
     }
 
-    // ── KICK ───────────────────────────────────────────────────────────────
-    if (sub === 'kick') {
-      const voiceChannel = member.voice?.channel;
-      if (!voiceChannel) {
-        return interaction.reply({
-          embeds: fixedEmbed(0xED4245, '❌ You must be in a voice channel!'),
-          flags: MessageFlags.Ephemeral,
-        });
-      }
-
-      const storedOwnerId = client.tempVoiceChannels.get(voiceChannel.id);
-      if (String(storedOwnerId) !== String(member.id)) {
-        return interaction.reply({
-          embeds: fixedEmbed(0xED4245, '❌ You are not the owner of this channel!'),
-          flags: MessageFlags.Ephemeral,
-        });
-      }
-
-      const target = interaction.options.getMember('user');
-      if (!target || target.id === member.id || target.voice?.channelId !== voiceChannel.id) {
-        return interaction.reply({
-          embeds: fixedEmbed(0xED4245, '❌ Invalid target — that user is not in your channel.'),
-          flags: MessageFlags.Ephemeral,
-        });
-      }
-
-      await target.voice.disconnect();
-
-      await sendLog(guild, new EmbedBuilder()
-        .setColor(0xffa500)
-        .setTitle('🦵 Voice Kick')
-        .addFields(
-          { name: '👑 Channel Owner', value: `${member} (${member.user.tag})`,   inline: false },
-          { name: '👤 Kicked User',   value: `${target} (${target.user.tag})`,   inline: false },
-          { name: '🎙️ Channel',       value: voiceChannel.name,                  inline: false },
-        )
-        .setTimestamp()
-      );
-
-      return interaction.reply({
-        embeds: fixedEmbed(0x57F287, `✅ **${target.displayName}** has been kicked from the channel.`),
-        flags: MessageFlags.Ephemeral,
-      });
-    }
-
-    // ── PANEL ──────────────────────────────────────────────────────────────
     if (sub === 'panel') {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -282,7 +234,6 @@ module.exports = {
         });
       }
 
-      // Delete old panel messages, then send fresh panel — no public reply
       await refreshPanel(interaction.channel, client);
 
       await sendLog(guild, new EmbedBuilder()

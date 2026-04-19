@@ -16,7 +16,6 @@ module.exports = {
           name: '🎙️ Temp Voice',
           value: [
             '`/voice setup <category>` — [Admin] Create trigger channel + interface panel',
-            '`/voice kick <user>` — Kick a user from your temporary channel',
             '`/voice panel` — [Admin] Refresh and resend the interface panel',
             '',
             '**Panel Buttons** *(in #🎙️・interface)*',
@@ -80,11 +79,23 @@ module.exports = {
         {
           name: '🎉 Giveaway',
           value: [
-            '`/giveaway start <prize> <duration> <channel> [ping] [role]` — Start a giveaway',
+            '`/giveaway start <prize> <duration> [ping] [role]` — Start a giveaway',
             '`/giveaway end <id>` — End early',
             '`/giveaway reroll <id>` — Reroll winner(s)',
             '`/giveaway delete <id>` — Cancel & delete',
             '`/giveaway list` — List all giveaways',
+          ].join('\n'),
+        },
+        {
+          name: '🎮 Games',
+          value: [
+            '`/trivia [cat]` — 🏁 Trivia Quiz (Race Mode)',
+            '*Categories: Anime, Games, Animals, Geography, Tech, Mythology, Music, History*',
+            '',
+            '`/unscramble [cat]` — 🧩 Word Unscramble (Chat Race)',
+            '*Categories: Anime Characters, Anime Titles, Video Games*',
+            '',
+            '`/leaderboard` — 🏆 Player Rankings',
           ].join('\n'),
         },
         {
