@@ -58,6 +58,8 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    return interaction.reply({ content: '❌ Command is disabled.', ephemeral: true });
+    
     const guildId = interaction.guild.id;
     const channelId = interaction.channel.id;
 
@@ -140,7 +142,10 @@ module.exports = {
           const winEmbed = new EmbedBuilder().setColor(0x57F287).setTitle('✅ Correct!')
             .setDescription(`${m.author} unscrambled it! **${original}**\n💰 **+${pts} Points** added!${currentStreak > 1 ? `\n🔥 **Streak:** **${currentStreak}x**` : ''}`);
           
-          const nextRow = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('game_next').setLabel('⏭️ Next Word').setStyle(ButtonStyle.Primary));
+          const nextRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('game_next').setLabel('⏭️ Next Word').setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId('game_end').setLabel('🛑 End Game').setStyle(ButtonStyle.Danger)
+          );
           await intx.followUp({ embeds: [winEmbed], components: [nextRow] });
         });
 
@@ -149,7 +154,10 @@ module.exports = {
             lastWinnerId = null; currentStreak = 0;
             const timeoutEmbed = new EmbedBuilder().setColor(0x99AAB5).setTitle('⌛ Time\'s Up!')
               .setDescription(`The word was: **${original}**\n🔥 *Streak reset!*`);
-            const nextRow = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('game_next').setLabel('⏭️ Next Word').setStyle(ButtonStyle.Primary));
+            const nextRow = new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('game_next').setLabel('⏭️ Next Word').setStyle(ButtonStyle.Primary),
+              new ButtonBuilder().setCustomId('game_end').setLabel('🛑 End Game').setStyle(ButtonStyle.Danger)
+            );
             await intx.followUp({ embeds: [timeoutEmbed], components: [nextRow] });
           }
         });
@@ -157,9 +165,16 @@ module.exports = {
         const btnCollector = intx.channel.createMessageComponentCollector({ componentType: ComponentType.Button, time: 60000 });
         btnCollector.on('collect', async i => {
           if (i.customId === 'game_next') {
-            btnCollector.stop();
+            btnCollector.stop('game_next');
             await i.deferUpdate();
             return playRound(i);
+          }
+          if (i.customId === 'game_end') {
+            await i.update({ components: [] });
+            btnCollector.stop('user');
+            setGameInactive(channelId);
+            await i.followUp({ embeds: [new EmbedBuilder().setColor(0xed4245).setDescription('🛑 Game ended. Thanks for playing!')] });
+            return;
           }
         });
 

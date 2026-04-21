@@ -128,6 +128,12 @@ module.exports = {
             collector.stop('next');
             return playRound(i);
           }
+          if (i.customId === 'trivia_end') {
+            await i.update({ components: [] });
+            collector.stop('end');
+            await i.followUp({ embeds: [new EmbedBuilder().setColor(0xed4245).setDescription('🛑 Game ended. Thanks for playing!')] });
+            return;
+          }
           if (answered) return;
           answered = true;
 
@@ -138,12 +144,22 @@ module.exports = {
             await db.addUserTriviaScore(guildId, i.user.id, pts);
             const winEmbed = new EmbedBuilder().setColor(0x57F287).setTitle('✅ Correct!')
               .setDescription(`${i.user} got it! **${correct}**\n💰 **+${pts} Points** added!${currentStreak > 1 ? `\n🔥 **Streak:** **${currentStreak}x**` : ''}`);
-            await i.update({ embeds: [winEmbed], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('trivia_next').setLabel('⏭️ Next').setStyle(ButtonStyle.Primary))] });
+            await i.update({ embeds: [winEmbed], components: [
+              new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId('trivia_next').setLabel('⏭️ Next').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('trivia_end').setLabel('🛑 End Game').setStyle(ButtonStyle.Danger)
+              )
+            ] });
           } else {
             lastWinnerId = null; currentStreak = 0;
             const loseEmbed = new EmbedBuilder().setColor(0xED4245).setTitle('❌ Wrong!')
               .setDescription(`${i.user} failed. Answer: **${correct}**\n🔥 *Streak broken!*`);
-            await i.update({ embeds: [loseEmbed], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('trivia_next').setLabel('⏭️ Next').setStyle(ButtonStyle.Primary))] });
+            await i.update({ embeds: [loseEmbed], components: [
+              new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId('trivia_next').setLabel('⏭️ Next').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('trivia_end').setLabel('🛑 End Game').setStyle(ButtonStyle.Danger)
+              )
+            ] });
           }
         });
 
@@ -154,7 +170,12 @@ module.exports = {
           if (reason === 'time' && !answered) {
             lastWinnerId = null; currentStreak = 0;
             const timeoutEmbed = new EmbedBuilder().setColor(0x99AAB5).setTitle('⌛ Time\'s Up!').setDescription(`Answer: **${correct}**\n🔥 *Streak reset!*`);
-            await intx.editReply({ embeds: [timeoutEmbed], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('trivia_next').setLabel('⏭️ Next').setStyle(ButtonStyle.Primary))] }).catch(()=>{});
+            await intx.editReply({ embeds: [timeoutEmbed], components: [
+              new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId('trivia_next').setLabel('⏭️ Next').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('trivia_end').setLabel('🛑 End Game').setStyle(ButtonStyle.Danger)
+              )
+            ] }).catch(()=>{});
           }
         });
       } catch (err) {

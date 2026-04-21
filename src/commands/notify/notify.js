@@ -1,7 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags, ChannelType, PermissionFlagsBits } = require('discord.js');
 const db = require('../../db');
 const { fixedEmbed } = require('../../utils/embedUtils');
-const { buildEmbed } = require('../../utils/anilist'); // from previous anime search logic
 
 module.exports = {
   data: new SlashCommandBuilder()

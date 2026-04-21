@@ -61,9 +61,15 @@ const CONFIG_DEFAULTS = {
   voicePanelChannelId: null,
   logChannelId:        null,
   autoRoleId:          null,
+  ticketPanelChannelId: null,
+  ticketCategoryId:    null,
+  ticketLogChannelId:  null,
+  ticketAdminRoleId:   null,
+  ticketCount:         0,
   reactionRolePanels:  {},
   giveaways:           {},
   triviaScores:        {},
+  economy:             {},
 };
 
 async function getGuildConfig(guildId) {
@@ -181,6 +187,38 @@ async function getTriviaLeaderboard(guildId) {
     .map(([userId, score]) => ({ userId, score }));
 }
 
+async function getEconomy(guildId, userId) {
+  const cfg = await getGuildConfig(guildId);
+  cfg.economy ??= {};
+  const defaults = { 
+    balance: 0, 
+    bank: 0, 
+    lastDaily: 0, 
+    streak: 0, 
+    lastReward: 0, 
+    lastInterest: Date.now(), 
+    inventory: [], 
+    luckyBoostUntil: 0,
+    fish: 0,
+    fishInventory: [],
+    equippedRod: null,
+    rodDurability: {},
+    lastFishTask: 0,
+    coffeeFishingUntil: 0,
+    atmTier: null,
+    equippedBait: null,
+    baitUses: {}
+  };
+  return { ...defaults, ...(cfg.economy[userId] || {}) };
+}
+
+async function updateEconomy(guildId, userId, data) {
+  const cfg = await getGuildConfig(guildId);
+  cfg.economy ??= {};
+  cfg.economy[userId] = { ... (cfg.economy[userId] || {}), ...data };
+  await setGuildConfig(guildId, { economy: cfg.economy });
+}
+
 module.exports = {
   connect,
   getGuildConfig,
@@ -199,4 +237,6 @@ module.exports = {
   updateTempVoiceJoinOrder,
   addUserTriviaScore,
   getTriviaLeaderboard,
+  getEconomy,
+  updateEconomy,
 };

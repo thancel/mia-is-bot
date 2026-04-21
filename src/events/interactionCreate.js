@@ -8,6 +8,8 @@ const {
   MessageFlags,
   UserSelectMenuBuilder,
   ChannelType,
+  ButtonBuilder,
+  ButtonStyle,
 } = require('discord.js');
 const { randomColor, fixedEmbed } = require('../utils/embedUtils');
 const db = require('../db');
@@ -17,6 +19,57 @@ async function sendLog(guild, embed) {
   if (!cfg.logChannelId) return;
   const ch = guild.channels.cache.get(cfg.logChannelId);
   if (ch) ch.send({ embeds: [embed] }).catch(() => {});
+}
+
+async function handleTicketClose(interaction, client, cfg) {
+  const { channel, user, guild } = interaction;
+  const closeReason = interaction.reason || 'No reason provided';
+  
+  // Send a closing message first
+  await channel.send({ embeds: fixedEmbed(0xffa500, '⏳ Ticket is closing. Saving transcript...') });
+  
+  // Try to generate simple text transcript
+  try {
+    let transcriptText = `Transcript for ${channel.name}\nClosed by: ${user.tag}\nReason: ${closeReason}\n\n`;
+    const messages = await channel.messages.fetch({ limit: 100 });
+    const sortedMessages = [...messages.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+    
+    for (const m of sortedMessages) {
+      if (m.author.bot) continue;
+      const time = new Date(m.createdTimestamp).toLocaleString();
+      transcriptText += `[${time}] ${m.author.tag}: ${m.content}\n`;
+      if (m.attachments.size > 0) {
+        transcriptText += `  [Attachments: ${m.attachments.map(a => a.url).join(', ')}]\n`;
+      }
+    }
+    
+    // Log to log channel
+    if (cfg.ticketLogChannelId) {
+      const logChannel = guild.channels.cache.get(cfg.ticketLogChannelId);
+      if (logChannel) {
+        const transcriptBuffer = Buffer.from(transcriptText, 'utf-8');
+        const { AttachmentBuilder } = require('discord.js');
+        const attachment = new AttachmentBuilder(transcriptBuffer, { name: `${channel.name}-transcript.txt` });
+        
+        const logEmbed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle('🎫 Ticket Closed')
+          .addFields(
+             { name: 'Channel', value: channel.name, inline: true },
+             { name: 'Closed By', value: `${user} (${user.tag})`, inline: true },
+             { name: 'Reason', value: closeReason, inline: false }
+          )
+          .setTimestamp();
+          
+        await logChannel.send({ embeds: [logEmbed], files: [attachment] }).catch(() => {});
+      }
+    }
+  } catch (err) {
+    console.error(`Failed to generate transcript: ${err.message}`);
+  }
+
+  // Delete channel
+  await channel.delete('Ticket closed').catch(() => {});
 }
 
 module.exports = {
@@ -137,6 +190,80 @@ module.exports = {
             flags: MessageFlags.Ephemeral,
           });
         }
+      }
+
+      // ── Ticket Buttons ──────────────────────────────────────────────────
+      if (customId === 'ticket_create') {
+        const cfg = await db.getGuildConfig(guild.id);
+        if (!cfg.ticketCategoryId) {
+           return interaction.reply({ embeds: fixedEmbed(0xed4245, '❌ Ticket system incomplete. Missing category in config.'), flags: MessageFlags.Ephemeral });
+        }
+
+        const modal = new ModalBuilder().setCustomId('ticket_modal_create').setTitle('🎫 Open Ticket');
+        const input = new TextInputBuilder()
+          .setCustomId('ticket_reason')
+          .setLabel('Reason')
+          .setStyle(TextInputStyle.Paragraph)
+          .setPlaceholder('Why are you opening this ticket?')
+          .setRequired(true);
+        modal.addComponents(new ActionRowBuilder().addComponents(input));
+        return interaction.showModal(modal);
+      }
+      
+      if (customId === 'ticket_accept') {
+        const cfg = await db.getGuildConfig(guild.id);
+        const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator) ||
+             (cfg.ticketAdminRoleId && member.roles.cache.has(cfg.ticketAdminRoleId));
+        if (!isAdmin) return interaction.reply({ embeds: fixedEmbed(0xed4245, '❌ Admin only.'), flags: MessageFlags.Ephemeral });
+        
+        const ownerMatch = interaction.channel.topic?.match(/Ticket Owner: (\d+)/);
+        if (ownerMatch) {
+            await interaction.channel.permissionOverwrites.edit(ownerMatch[1], { SendMessages: true });
+        }
+        
+        await interaction.message.edit({ components: [
+            new ActionRowBuilder().addComponents(
+               new ButtonBuilder().setCustomId('ticket_close_btn').setEmoji('🔒').setLabel('Close Ticket').setStyle(ButtonStyle.Danger)
+            )
+        ] });
+        
+        return interaction.reply({
+            content: ownerMatch ? `<@${ownerMatch[1]}>` : null,
+            embeds: fixedEmbed(0x57f287, '✅ **Ticket Accepted!** Staff will assist you shortly. You may now send messages.')
+        });
+      }
+      
+      if (customId === 'ticket_reject') {
+        const cfg = await db.getGuildConfig(guild.id);
+        const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator) ||
+             (cfg.ticketAdminRoleId && member.roles.cache.has(cfg.ticketAdminRoleId));
+        if (!isAdmin) return interaction.reply({ embeds: fixedEmbed(0xed4245, '❌ Admin only.'), flags: MessageFlags.Ephemeral });
+        
+        interaction.reason = 'Rejected by ' + interaction.user.tag;
+        await interaction.reply({ embeds: fixedEmbed(0xed4245, '❌ Rejecting and closing ticket...'), flags: MessageFlags.Ephemeral });
+        await handleTicketClose(interaction, client, cfg);
+        return;
+      }
+
+      if (customId === 'ticket_close_btn') {
+        const cfg = await db.getGuildConfig(guild.id);
+        
+        const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator) ||
+             (cfg.ticketAdminRoleId && member.roles.cache.has(cfg.ticketAdminRoleId));
+             
+        const isOwner = interaction.channel.topic?.includes(`Ticket Owner: ${member.id}`);
+        
+        if (!isAdmin && !isOwner) {
+           return interaction.reply({ embeds: fixedEmbed(0xed4245, '❌ You do not have permission to close this ticket.'), flags: MessageFlags.Ephemeral });
+        }
+        
+        interaction.reason = 'Closed via button by ' + interaction.user.tag;
+        
+        // Let them know we're processing
+        await interaction.reply({ embeds: fixedEmbed(0x57f287, '🔒 Closing ticket...'), flags: MessageFlags.Ephemeral });
+        
+        await handleTicketClose(interaction, client, cfg);
+        return;
       }
 
       // ── Temp Voice Buttons ─────────────────────────────────────────────
@@ -555,6 +682,70 @@ module.exports = {
     // ── Modal Submissions ───────────────────────────────────────────────────
     if (interaction.isModalSubmit()) {
       const { customId, member, guild } = interaction;
+      
+      if (customId === 'ticket_modal_create') {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        
+        const reason = interaction.fields.getTextInputValue('ticket_reason');
+        const cfg = await db.getGuildConfig(guild.id);
+        
+        const currentCount = cfg.ticketCount || 0;
+        const newCount = currentCount + 1;
+        await db.setGuildConfig(guild.id, { ticketCount: newCount });
+        
+        const ticketName = `ticket-${newCount.toString().padStart(4, '0')}`;
+        
+        try {
+          const permissionOverwrites = [
+            {
+              id: guild.roles.everyone.id,
+              deny: [PermissionFlagsBits.ViewChannel],
+            },
+            {
+              id: member.id,
+              allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
+              deny: [PermissionFlagsBits.SendMessages],
+            }
+          ];
+          
+          if (cfg.ticketAdminRoleId) {
+             permissionOverwrites.push({
+               id: cfg.ticketAdminRoleId,
+               allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+             });
+          }
+          
+          const category = guild.channels.cache.get(cfg.ticketCategoryId);
+          const parent = category && category.type === ChannelType.GuildCategory ? category.id : null;
+          
+          const newTicketCh = await guild.channels.create({
+            name: ticketName,
+            type: ChannelType.GuildText,
+            parent: parent,
+            topic: `Ticket Owner: ${member.id}`,
+            permissionOverwrites,
+          });
+          
+          const welcomeEmbed = new EmbedBuilder()
+            .setColor(0x5865F2)
+            .setTitle(`🎫 ${ticketName}`)
+            .setDescription(`**Ticket by** ${member}\n\n**Reason:** ${reason}\n\n*Please wait until a staff member accepts your ticket to start chatting.*`)
+            .setFooter({ text: 'Staff can accept or reject this ticket below.' });
+            
+          const actionRow = new ActionRowBuilder().addComponents(
+             new ButtonBuilder().setCustomId('ticket_accept').setEmoji('✅').setLabel('Accept').setStyle(ButtonStyle.Success),
+             new ButtonBuilder().setCustomId('ticket_reject').setEmoji('❌').setLabel('Reject').setStyle(ButtonStyle.Danger),
+             new ButtonBuilder().setCustomId('ticket_close_btn').setEmoji('🔒').setLabel('Close').setStyle(ButtonStyle.Secondary)
+          );
+          
+          await newTicketCh.send({ content: `${cfg.ticketAdminRoleId ? `<@&${cfg.ticketAdminRoleId}>` : 'Admin'}`, embeds: [welcomeEmbed], components: [actionRow] });
+          
+          return interaction.editReply({ embeds: fixedEmbed(0x57f287, `✅ Ticket created! Please go to ${newTicketCh}`) });
+        } catch (err) {
+           return interaction.editReply({ embeds: fixedEmbed(0xed4245, `❌ Failed to create ticket: ${err.message}`) });
+        }
+      }
+
       const modals = ['tv_modal_rename', 'tv_modal_limit'];
       if (!modals.includes(customId)) return;
 
@@ -591,4 +782,5 @@ module.exports = {
       }
     }
   },
+  handleTicketClose,
 };
