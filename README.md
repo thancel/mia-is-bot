@@ -136,5 +136,4 @@ npm run dev
 
 - **JSON mode** (`data/db.json`): Data is saved to disk on every write and persists across bot restarts. No external setup required.
 - **Supabase mode**: Persistent cloud PostgreSQL. Recommended for production or multi-instance deployments.
-- All embeds use **random colors** by default, except welcome/goodbye embeds which use the color configured via `/welcome color` or `/goodbye color`.
 - **AniList API** is free and requires no API key.
