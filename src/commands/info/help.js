@@ -22,8 +22,7 @@ module.exports = {
             '✏️ **Name** — Rename channel  •  🔒 **Limit** — Set user limit',
             '🛡️ **Privacy** — Lock/Unlock  •  ⏳ **Waiting R.** — Waiting room',
             '👤 **Trust/Untrust** — Manage access',
-            '📩 **Invite** — Invite user  •  🦶 **Kick** — Kick user',
-            '🚫 **Block/Unblock** — Block user',
+            '🚫 **Block/Unblock** — Block user  •  🦶 **Kick** — Kick user',
             '👑 **Claim** — Claim ownership  •  🔄 **Transfer** — Transfer owner',
             '🗑️ **Delete** — Delete your channel',
           ].join('\n'),
@@ -33,8 +32,6 @@ module.exports = {
           value: [
             '`/anime <title>` — Search anime via AniList',
             '`/manga <title>` — Search manga via AniList',
-            '`/notify anime setup` — Track AniList user and notify when episodes air',
-            '`/notify anime remove` — Disable anime notifications',
           ].join('\n'),
         },
         {
@@ -86,18 +83,7 @@ module.exports = {
             '`/giveaway list` — List all giveaways',
           ].join('\n'),
         },
-        {
-          name: '🎮 Games',
-          value: [
-            '`/trivia [cat]` — 🏁 Trivia Quiz (Race Mode)',
-            '*Categories: Anime, Games, Animals, Geography, Tech, Mythology, Music, History*',
-            '',
-            '`/unscramble [cat]` — 🧩 Word Unscramble (Chat Race)',
-            '*Categories: Anime Characters, Anime Titles, Video Games*',
-            '',
-            '`/leaderboard` — 🏆 Player Rankings',
-          ].join('\n'),
-        },
+
         {
           name: 'ℹ️ Info',
           value: [

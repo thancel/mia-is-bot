@@ -2,7 +2,7 @@
 node_modules/
 
 # Database & Local Data
-data/
+/data/
 
 # Environment Variables & Secrets
 .env

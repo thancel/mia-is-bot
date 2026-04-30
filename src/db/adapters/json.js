@@ -68,8 +68,7 @@ const CONFIG_DEFAULTS = {
   ticketCount:         0,
   reactionRolePanels:  {},
   giveaways:           {},
-  triviaScores:        {},
-  economy:             {},
+
 };
 
 async function getGuildConfig(guildId) {
@@ -171,53 +170,7 @@ function getAllGuildConfigs() {
   return db().guildConfigs || {};
 }
 
-async function addUserTriviaScore(guildId, userId, points) {
-  const cfg = await getGuildConfig(guildId);
-  cfg.triviaScores ??= {};
-  cfg.triviaScores[userId] = (cfg.triviaScores[userId] || 0) + points;
-  await setGuildConfig(guildId, { triviaScores: cfg.triviaScores });
-}
 
-async function getTriviaLeaderboard(guildId) {
-  const cfg = await getGuildConfig(guildId);
-  const scores = cfg.triviaScores || {};
-  return Object.entries(scores)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 10)
-    .map(([userId, score]) => ({ userId, score }));
-}
-
-async function getEconomy(guildId, userId) {
-  const cfg = await getGuildConfig(guildId);
-  cfg.economy ??= {};
-  const defaults = { 
-    balance: 0, 
-    bank: 0, 
-    lastDaily: 0, 
-    streak: 0, 
-    lastReward: 0, 
-    lastInterest: Date.now(), 
-    inventory: [], 
-    luckyBoostUntil: 0,
-    fish: 0,
-    fishInventory: [],
-    equippedRod: null,
-    rodDurability: {},
-    lastFishTask: 0,
-    coffeeFishingUntil: 0,
-    atmTier: null,
-    equippedBait: null,
-    baitUses: {}
-  };
-  return { ...defaults, ...(cfg.economy[userId] || {}) };
-}
-
-async function updateEconomy(guildId, userId, data) {
-  const cfg = await getGuildConfig(guildId);
-  cfg.economy ??= {};
-  cfg.economy[userId] = { ... (cfg.economy[userId] || {}), ...data };
-  await setGuildConfig(guildId, { economy: cfg.economy });
-}
 
 module.exports = {
   connect,
@@ -235,8 +188,5 @@ module.exports = {
   getAllTempVoices,
   updateTempVoiceOwner,
   updateTempVoiceJoinOrder,
-  addUserTriviaScore,
-  getTriviaLeaderboard,
-  getEconomy,
-  updateEconomy,
+
 };

@@ -182,7 +182,6 @@ discord-bot/
 | `⏳` **Waiting R.** | Toggle Waiting Room |
 | `👤` **Trust/Untrust** | Manage user access (toggle) |
 | `🚫` **Block/Unblock** | Block user from joining (toggle) |
-| `📩` **Invite** | Invite a user via DM with bypass |
 | `🦶` **Kick** | Kick a user from channel |
 | `👑` **Claim** | Claim ownership of empty-owned channel |
 | `🔄` **Transfer** | Transfer ownership to someone else |
@@ -195,8 +194,6 @@ discord-bot/
 |---------|-------------|
 | `/anime <title>` | Search anime via AniList. Shows selection if multiple results. |
 | `/manga <title>` | Search manga via AniList. Shows selection if multiple results. |
-| `/notify anime setup <channel> [username] [role]`| Track AniList user's watching/planning list and notify when episodes air. |
-| `/notify anime remove` | Disable anime notifications for this server. |
 
 ### 🛡️ Moderation
 | Command | Description |
@@ -252,12 +249,6 @@ discord-bot/
 | `/giveaway delete <giveaway_id>` | Cancel and delete a giveaway |
 | `/giveaway list` | List all active and ended giveaways |
 
-### 🎮 Games
-| Command | Description |
-|---------|-------------|
-| `/trivia [category]` | Start a Trivia quiz (Race Mode). Categories: Anime, Games, Animals, Geography, Tech, Mythology, Music, History. |
-| `/unscramble [cat]` | Start a Word Unscramble game (Chat Race). Categories: Anime Characters, Anime Titles, Video Games. *Supports reversed names for characters.* |
-| `/leaderboard` | Show the top 10 players with the highest game scores. |
 
 ### ℹ️ Info
 | Command | Description |

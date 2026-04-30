@@ -7,9 +7,7 @@ const {
   ButtonBuilder,
   ButtonStyle,
   MessageFlags,
-  AttachmentBuilder,
 } = require('discord.js');
-const path = require('path');
 const db = require('../../db');
 const { randomColor, fixedEmbed } = require('../../utils/embedUtils');
 
@@ -22,24 +20,23 @@ async function sendLog(guild, embed) {
 
 function buildControlPanel() {
   const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('tv_rename').setEmoji('✏️').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('tv_limit').setEmoji('🔒').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('tv_privacy').setEmoji('🛡️').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('tv_waitingroom').setEmoji('⏳').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('tv_trust').setEmoji('👤').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('tv_rename').setEmoji('✏️').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('tv_limit').setEmoji('🔒').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('tv_privacy').setEmoji('🛡️').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('tv_waitingroom').setEmoji('⏳').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('tv_trust').setEmoji('👤').setStyle(ButtonStyle.Primary),
   );
   const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('tv_block').setEmoji('🚫').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('tv_invite').setEmoji('📩').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('tv_kick').setEmoji('🦶').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('tv_claim').setEmoji('👑').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('tv_transfer').setEmoji('🔄').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('tv_block').setEmoji('🚫').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('tv_kick').setEmoji('🦶').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('tv_claim').setEmoji('👑').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('tv_transfer').setEmoji('🔄').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('tv_delete').setEmoji('🗑️').setStyle(ButtonStyle.Primary),
   );
-  const row3 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('tv_delete').setEmoji('🗑️').setStyle(ButtonStyle.Danger),
-  );
-  return [row1, row2, row3];
+  return [row1, row2];
 }
+
+const VOICE_PANEL_IMAGE = 'https://raw.githubusercontent.com/thancel/thansset/main/voicepanel.png';
 
 function buildPanelEmbed(client) {
   return new EmbedBuilder()
@@ -49,7 +46,7 @@ function buildPanelEmbed(client) {
       'This **interface** can be used to manage temporary voice channels.\n' +
       'All controls are accessible via the buttons below.'
     )
-    .setImage('attachment://voice-panel.png')
+    .setImage(VOICE_PANEL_IMAGE)
     .setFooter({ text: 'Press the buttons below to use the interface' });
 }
 
@@ -91,12 +88,9 @@ async function refreshPanel(panelChannel, client) {
     }
   } catch (_) {}
 
-  const attachment = new AttachmentBuilder(path.join(__dirname, '../../assets/voice-panel.png'), { name: 'voice-panel.png' });
-
   await panelChannel.send({
     embeds: [buildPanelEmbed(client)],
     components: buildControlPanel(),
-    files: [attachment],
   });
 }
 
@@ -188,12 +182,9 @@ module.exports = {
 
         await db.setGuildConfig(guild.id, { voicePanelChannelId: panelCh.id });
 
-        const attachment = new AttachmentBuilder(path.join(__dirname, '../../assets/voice-panel.png'), { name: 'voice-panel.png' });
-
         await panelCh.send({
           embeds: [buildPanelEmbed(client)],
           components: buildControlPanel(),
-          files: [attachment],
         });
 
         await sendLog(guild, new EmbedBuilder()

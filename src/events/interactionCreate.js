@@ -269,7 +269,7 @@ module.exports = {
       // ── Temp Voice Buttons ─────────────────────────────────────────────
       const tvButtons = [
         'tv_rename', 'tv_limit', 'tv_privacy', 'tv_waitingroom',
-        'tv_trust', 'tv_untrust', 'tv_invite', 'tv_kick',
+        'tv_trust', 'tv_untrust', 'tv_kick',
         'tv_block', 'tv_unblock', 'tv_claim', 'tv_transfer', 'tv_delete',
       ];
       if (!tvButtons.includes(customId)) return;
@@ -353,13 +353,12 @@ module.exports = {
       }
 
       // Convert certain buttons into User Select Menu ephemeral messages
-      const selectMenuActions = ['trust', 'invite', 'kick', 'block', 'transfer'];
+      const selectMenuActions = ['trust', 'kick', 'block', 'transfer'];
       const actionName = customId.replace('tv_', '');
 
       if (selectMenuActions.includes(actionName)) {
         const actionLabels = {
           trust: '👤 Select a user to Trust / Untrust',
-          invite: '📩 Select a user to Invite',
           kick: '🦶 Select a user to Kick',
           block: '🚫 Select a user to Block / Unblock',
           transfer: '🔄 Select user for Ownership Transfer',
@@ -530,29 +529,7 @@ module.exports = {
         }
       }
 
-      if (action === 'invite') {
-        try {
-          await voiceChannel.permissionOverwrites.edit(targetUserId, { Connect: true });
-          try {
-            await targetMember.send({
-              embeds: [new EmbedBuilder()
-                .setColor(0x5865f2)
-                .setTitle('📩 Voice Channel Invitation')
-                .setDescription(`**${member.displayName}** has invited you to join their voice channel **${voiceChannel.name}** in **${guild.name}**!`)
-                .setTimestamp()
-              ],
-            });
-          } catch (_) {}
-          
-          return interaction.editReply({
-            content: null,
-            components: [],
-            embeds: fixedEmbed(0x57f287, `✅ **${targetMember.displayName}** has been **invited** to your channel!`),
-          });
-        } catch (err) {
-          return interaction.followUp({ embeds: fixedEmbed(0xed4245, `❌ Failed to invite user: ${err.message}`), flags: MessageFlags.Ephemeral });
-        }
-      }
+
 
       if (action === 'kick') {
         try {
